@@ -66,7 +66,6 @@ public class FarmKiller extends GameMode
 		};
 	}
 	
-	@Override
 	public String describeTeam(int team, boolean plural)
 	{
 		switch ( team )
