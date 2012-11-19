@@ -15,8 +15,11 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.Material;
 
 public class FarmKiller extends GameMode
@@ -24,7 +27,7 @@ public class FarmKiller extends GameMode
 	public static final int friendlyFire = 0, diminishingReturns = 1, optionTwoTeams = 2, optionThreeTeams = 3, optionFourTeams = 4;
 
 	@Override
-	public String getName() { return "Form Killer"; }
+	public String getName() { return "Farm Killer"; }
 	
 	private int numTeams = 2;
 	
@@ -66,7 +69,7 @@ public class FarmKiller extends GameMode
 		};
 	}
 	
-	public String describeTeam(int team, boolean plural)
+	public String getTeamName(int team)
 	{
 		switch ( team )
 		{
@@ -79,24 +82,7 @@ public class FarmKiller extends GameMode
 		case 3:
 			return "green team";
 		default:
-			return plural ? "players" : "player";
-		}
-	}
-	
-	public ChatColor getTeamChatColor(int team)
-	{
-		switch ( team )
-		{
-		case 0:
-			return ChatColor.BLUE;
-		case 1:
-			return ChatColor.RED;
-		case 2:
-			return ChatColor.YELLOW;
-		case 3:
-			return ChatColor.GREEN;
-		default:
-			return ChatColor.RESET;
+			return "team #" + team;
 		}
 	}
 	
@@ -107,20 +93,22 @@ public class FarmKiller extends GameMode
 		{
 			case 0:
 			{
+				String numText;
 				switch ( numTeams )
 				{
 					case 2:
-						return "Players have been split into two teams. Get farming!\nThe scoreboard shows what team each player is on.";
+						numText = "two "; break;
 					case 3:
-						return "Players have been split into three teams. Get farming!\nThe scoreboard shows what team each player is on.";
+						numText = "three "; break;
 					case 4:
-						return "Players have been split into four teams. Get farming!\nThe scoreboard shows what team each player is on.";
+						numText = "four "; break;
 					default:
-						return "Players have been split into teams. Get farming!\nThe scoreboard shows what team each player is on.";
+						numText = ""; break;
 				}
+				return "Players have been split into " + numText + "teams. Get farming!\nThe scoreboard shows what team each player is on.";
 			}
 			case 1:
-				String message = "The teams complete to deliver the most farm produce (plants, seeds, animals, and eggs - NO MEAT) to a central depot.";
+				String message = "The teams complete to deliver the most farm produce (plants, animals, and eggs - no meat or seeds) to a central depot.";
 				return message;
 				
 			default:
@@ -139,10 +127,13 @@ public class FarmKiller extends GameMode
 	@Override
 	public void worldGenerationComplete(World main, World nether)
 	{
-		dropOffCenter = main.getSpawnLocation();
+		dropOffCenter = new Location(main, 0, main.getSeaLevel()+10, 0);
 		
-		// generate the central drop-off point
-		createDropOff(dropOffCenter);
+		// create a grassy plain around where the drop off will be
+		createFlatSurface();
+		
+		// generate the central drop-off point itself
+		createDropOff();
 	
 		// generate spawn points for each team
 		for ( int team=0; team<numTeams; team++ )
@@ -155,48 +146,100 @@ public class FarmKiller extends GameMode
 	@Override
 	public boolean isLocationProtected(Location l)
 	{
-		int dy = dropOffCenter.getBlockY(), ly = l.getBlockY();
-		if ( l.getBlockY() < dy || ly > dy + 5 )
+		int cy = dropOffCenter.getBlockY(), ly = l.getBlockY();
+		if ( l.getBlockY() < cy - 2 || ly > cy + 5 )
 			return false;
 		
-		// if its RIGHT on the spawn x for any team, or on the drop-off building, it's protected
-		int lx = l.getBlockX(), lz = l.getBlockZ();
-		if ( lx > dropOffCenter.getBlockX() - 3 && lx < dropOffCenter.getBlockX() + 3
-		  && lz > dropOffCenter.getBlockZ() - 3 && lz < dropOffCenter.getBlockZ() + 3 )
+		// the drop-off building is protected
+		int cx =  dropOffCenter.getBlockX(), cz = dropOffCenter.getBlockZ(), lx = l.getBlockX(), lz = l.getBlockZ();
+		if ( lx > cx - 3 && lx < cx + 3
+		  && lz > cz - 3 && lz < cz + 3 )
 			return true;
 			
+		// the spawn point for each team is also protected 
 		for ( int team=0; team<numTeams; team++ )
 		{
 			Location spawn = getSpawnLocationForTeam(team);
-			if ( lx == spawn.getBlockX() && lz == spawn.getBlockZ() && ly < dy + 2 )
+			if ( lx == spawn.getBlockX() && lz == spawn.getBlockZ() && ly < cy + 2 )
 				return true;
 		}
 		return false;
 	}
 	
-	public void createDropOff(Location center)
+	public void createFlatSurface()
 	{
-		int xmin = center.getBlockX() - 2, xmax = center.getBlockX() + 2;
-		int zmin = center.getBlockZ() - 2, zmax = center.getBlockZ() + 2;
-		int ymin = center.getBlockY();
-
-		World w = center.getWorld();
-
-		// generate a large, flat, grassy plain. Nothing above it, no water/lava/holes below.
-		for ( int x=xmin - 26; x < xmax + 27; x++ )
-			for ( int z=zmin - 26; z < zmax + 27; z++ )
+		final int range = 45, fadeLength = 16;
+		
+		int dropOffY = dropOffCenter.getBlockY();
+		World world = dropOffCenter.getWorld();
+		
+		for ( int x=dropOffCenter.getBlockX()-range; x<=dropOffCenter.getBlockX()+range; x++ )
+			for ( int z=dropOffCenter.getBlockZ()-range; z<=dropOffCenter.getBlockZ()+range; z++ )
+				fillInAboveBelow(world, x, dropOffY-1, z);
+		
+		int minZ = dropOffCenter.getBlockZ()-range, maxZ = dropOffCenter.getBlockZ()+range,
+			minX = dropOffCenter.getBlockX()-range, maxX = dropOffCenter.getBlockX()+range;
+		for ( int fade = 1; fade<=fadeLength; fade++ )
+		{
+			float fraction = ((float)fade)/fadeLength;
+			for ( int z=minZ-fadeLength; z<=maxZ+fadeLength; z++ )
 			{
-				w.getBlockAt(x, ymin - 1, z).setType(Material.GRASS);
-				for ( int y=ymin; y<ymin + 32; y++ )
-					w.getBlockAt(x, y, z).setType(Material.AIR);
+				int x = dropOffCenter.getBlockX()+range+fade;
+				// only do corners up to (and including) the "diagonal"
 				
-				for ( int y=ymin - 2; y>ymin - 16; y-- )
-				{
-					Block b = w.getBlockAt(x, y, z);
-					if ( b.getType() == Material.AIR || b.isLiquid() )
-						b.setType(Material.DIRT);
-				}
+				int y = (int)(0.5f + world.getHighestBlockYAt(x, z) * fraction + (dropOffY-1) * (1f - fraction));
+				fillInAboveBelow(world, x, y, z);
+				
+				x = dropOffCenter.getBlockX()-range-fade;
+				y = (int)(0.5f + world.getHighestBlockYAt(x, z) * fraction + (dropOffY-1) * (1f - fraction));
+				fillInAboveBelow(world, x, y, z);
 			}
+			
+			for ( int x=minX-fadeLength; x<=maxX+fadeLength; x++ )
+			{
+				int z = dropOffCenter.getBlockZ()+range+fade;
+				// only do corners up to (but not including) the "diagonal"
+				
+				int y = (int)(0.5f + world.getHighestBlockYAt(x, z) * fraction + (dropOffY-1) * (1f - fraction));
+				fillInAboveBelow(world, x, y, z);
+				
+				z = dropOffCenter.getBlockZ()-range-fade;
+				y = (int)(0.5f + world.getHighestBlockYAt(x, z) * fraction + (dropOffY-1) * (1f - fraction));
+				fillInAboveBelow(world, x, y, z);
+			}
+		}
+	}
+		
+	private void fillInAboveBelow(World world, int x, int groundY, int z)
+	{
+		int y = groundY-1, maxY = world.getMaxHeight();
+		Block b = world.getBlockAt(x, y, z);
+		do
+		{
+			b.setType(Material.DIRT);
+			
+			y--;
+			b = world.getBlockAt(x, y, z);
+		}
+		while ( b.getType() != Material.DIRT && b.getType() != Material.STONE && b.getType() != Material.BEDROCK );
+		
+		int prevMaxY = world.getHighestBlockAt(x, z).getY();
+		for ( y=prevMaxY; y<groundY; y++ )
+			world.getBlockAt(x,y,z).setType(Material.DIRT);
+		
+		world.getBlockAt(x,groundY,z).setType(Material.GRASS);
+		
+		for ( y=groundY+1; y<maxY; y++ )
+			world.getBlockAt(x,y,z).setType(Material.AIR);
+	}
+	
+	public void createDropOff()
+	{
+		int xmin = dropOffCenter.getBlockX() - 2, xmax = dropOffCenter.getBlockX() + 2;
+		int zmin = dropOffCenter.getBlockZ() - 2, zmax = dropOffCenter.getBlockZ() + 2;
+		int ymin = dropOffCenter.getBlockY();
+
+		World w = dropOffCenter.getWorld();
 		
 		// now, generate a hut for the drop-off
 		w.getBlockAt(xmin, ymin, zmin).setType(Material.WOOD_STEP);
@@ -250,8 +293,8 @@ public class FarmKiller extends GameMode
 			w.getBlockAt(xmax-2, y, zmax-2).setType(Material.FENCE);
 		}
 
-		w.getBlockAt(center.getBlockX(), ymin + 4, center.getBlockZ()).setType(Material.GLOWSTONE);
-		w.getBlockAt(center.getBlockX(), ymin + 5, center.getBlockZ()).setType(Material.WOOD_STEP);
+		w.getBlockAt(dropOffCenter.getBlockX(), ymin + 4, dropOffCenter.getBlockZ()).setType(Material.GLOWSTONE);
+		w.getBlockAt(dropOffCenter.getBlockX(), ymin + 5, dropOffCenter.getBlockZ()).setType(Material.WOOD_STEP);
 
 		w.getBlockAt(xmin + 2, ymin + 5, zmin + 2).setType(Material.TORCH);
 		w.getBlockAt(xmax - 2, ymin + 5, zmin + 2).setType(Material.TORCH);
@@ -263,9 +306,6 @@ public class FarmKiller extends GameMode
 	public boolean isAllowedToRespawn(Player player) { return true; }
 	
 	@Override
-	public boolean lateJoinersMustSpectate() { return false; }
-	
-	@Override
 	public boolean useDiscreetDeathMessages() { return false; }
 
 	private Location getSpawnLocationForTeam(int team)
@@ -274,20 +314,20 @@ public class FarmKiller extends GameMode
 		{
 			case 0:
 				if ( numTeams == 3 )
-					return dropOffCenter.add(-17, 0, -10); // for 3 teams, ensure they're equidistant from each other, as well as from the plinth
+					return dropOffCenter.add(-34, 0, -20); // for 3 teams, ensure they're equidistant from each other, as well as from the plinth
 				else
-					return dropOffCenter.add(-20, 0, 0);
+					return dropOffCenter.add(-40, 0, 0);
 			case 1:
 				if ( numTeams == 3 )
-					return dropOffCenter.add(17, 0, -10); // for 3 teams, ensure they're equidistant from each other, as well as from the plinth
+					return dropOffCenter.add(34, 0, -20); // for 3 teams, ensure they're equidistant from each other, as well as from the plinth
 				else
-					return dropOffCenter.add(20, 0, 0);
+					return dropOffCenter.add(40, 0, 0);
 			case 2:
-				return dropOffCenter.add(0, 0, 20);
+				return dropOffCenter.add(0, 0, 40);
 			case 3:
-				return dropOffCenter.add(0, 0, -20);
+				return dropOffCenter.add(0, 0, -40);
 			default:
-				return getMainWorld().getSpawnLocation();
+				return dropOffCenter;
 		}
 	}
 	
@@ -354,12 +394,7 @@ public class FarmKiller extends GameMode
 		while ( players.size() > 0 )
 		{// pick random player, add them to one of the teams with the fewest players (picked randomly)
 			Player player = players.remove(random.nextInt(players.size()));
-		
-			int team = pickSmallestTeam(teamCounts);
-			
-			setTeam(player, team);
-			teamCounts[team] ++;
-			player.sendMessage("You are on the " + getTeamChatColor(team) + describeTeam(team, false) + "\n" + ChatColor.RESET + "Use the /team command to send messages to your team only");
+			allocatePlayer(player, teamCounts);
 		}
 	}
 	
@@ -380,12 +415,67 @@ public class FarmKiller extends GameMode
 		for ( int i=0; i<numTeams; i++ )
 			teamCounts[i] = getOnlinePlayers(i, true).size();
 		
-		int team = pickSmallestTeam(teamCounts);
-		setTeam(player, team);
+		int team = allocatePlayer(player, teamCounts);		
+		broadcastMessage(player, player.getName() + " has joined the " + getTeamChatColor(team) + getTeamName(team));
+	}
 
-		player.sendMessage("You are on the " + getTeamChatColor(team) + describeTeam(team, false) + "\n" + ChatColor.RESET + "Use the /team command to send messages to your team only");
+	private int allocatePlayer(Player player, int[] teamCounts)
+	{
+		int team = pickSmallestTeam(teamCounts);
 		
-		broadcastMessage(player, player.getName() + " has joined the " + getTeamChatColor(team) + describeTeam(team, false));
+		setTeam(player, team);
+		teamCounts[team] ++;
+		player.sendMessage("You are on the " + getTeamChatColor(team) + getTeamName(team) + "\n" + ChatColor.RESET + "Use the /team command to send messages to your team only");
+		
+		equipPlayer(player, team);
+
+		return team;
+	}
+	
+	private void equipPlayer(Player player, int team)
+	{
+		PlayerInventory inv = player.getInventory();
+		int color = getTeamItemColor(team);
+		
+		// give them team-dyed armor, and a sword
+		ItemStack armor = new ItemStack(Material.LEATHER_CHESTPLATE);
+		inv.setChestplate(setColor(armor, color));
+		
+		armor = new ItemStack(Material.LEATHER_CHESTPLATE);
+		inv.setLeggings(setColor(armor, color));
+		
+		armor = new ItemStack(Material.LEATHER_BOOTS);
+		inv.setBoots(setColor(armor, color));
+		
+		inv.addItem(new ItemStack(Material.IRON_SWORD));
+	}
+
+	private boolean isAllowedToDrop(Material type)
+	{
+		return type != Material.LEATHER_CHESTPLATE
+			&& type != Material.LEATHER_LEGGINGS
+			&& type != Material.LEATHER_BOOTS;
+	}
+	
+	@EventHandler
+	public void onPlayerRespawn(PlayerRespawnEvent event)
+	{
+		final Player player = event.getPlayer();
+		getPlugin().getServer().getScheduler().scheduleSyncDelayedTask(getPlugin(), new Runnable() {
+			public void run() {
+				equipPlayer(player, getTeam(player));
+			}
+		});
+	}
+	
+	@EventHandler
+	public void onPlayerKilled(PlayerDeathEvent event)
+	{
+		// players don't drop leather armor or iron swords on death
+		List<ItemStack> drops = event.getDrops();
+		for ( int i=0; i<drops.size(); i++ )
+			if ( !isAllowedToDrop(drops.get(i).getType()) )	
+				drops.remove(i--);
 	}
 	
 	@Override
@@ -407,6 +497,11 @@ public class FarmKiller extends GameMode
 			return;
 		
 		ItemStack stack = event.getItemDrop().getItemStack();
+		if ( !isAllowedToDrop(stack.getType()) )
+		{
+			event.setCancelled(true);
+			return;
+		}
 		if ( !isScoringItemType(stack.getType()) )
 			return;
 		
@@ -421,7 +516,7 @@ public class FarmKiller extends GameMode
 		
 		event.getItemDrop().remove(); // don't actually DROP the item ... should we schedule a brief delay here? Only if 
     }
-	
+
 	private boolean isInDropOffArea(Location loc)
 	{
 		if ( loc.getY() < dropOffCenter.getY() || loc.getY() > dropOffCenter.getY() + 4 )
@@ -436,9 +531,9 @@ public class FarmKiller extends GameMode
 		switch ( type )
 		{
 		case WHEAT:
-		case SEEDS:
-		case PUMPKIN_SEEDS:
-		case MELON_SEEDS:
+		//case SEEDS:
+		//case PUMPKIN_SEEDS:
+		//case MELON_SEEDS:
 		case MELON:
 		case MELON_BLOCK:
 		case PUMPKIN:
