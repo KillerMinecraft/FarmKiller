@@ -182,34 +182,47 @@ public class FarmKiller extends GameMode
 		for ( int fade = 1; fade<=fadeLength; fade++ )
 		{
 			float fraction = ((float)fade)/fadeLength;
-			for ( int z=minZ-fadeLength; z<=maxZ+fadeLength; z++ )
+			for ( int z=minZ-fade; z<=maxZ+fade; z++ )
 			{
 				int x = dropOffCenter.getBlockX()+range+fade;
-				// only do corners up to (and including) the "diagonal"
-				
-				int y = (int)(0.5f + world.getHighestBlockYAt(x, z) * fraction + (dropOffY-1) * (1f - fraction));
+				int y = (int)(0.5f + getHighestGroundYAt(world, x, z) * fraction + (dropOffY-1) * (1f - fraction));
 				fillInAboveBelow(world, x, y, z);
 				
 				x = dropOffCenter.getBlockX()-range-fade;
-				y = (int)(0.5f + world.getHighestBlockYAt(x, z) * fraction + (dropOffY-1) * (1f - fraction));
+				y = (int)(0.5f + getHighestGroundYAt(world, x, z) * fraction + (dropOffY-1) * (1f - fraction));
 				fillInAboveBelow(world, x, y, z);
 			}
 			
-			for ( int x=minX-fadeLength; x<=maxX+fadeLength; x++ )
+			for ( int x=minX-fade+1; x<maxX+fade; x++ )
 			{
 				int z = dropOffCenter.getBlockZ()+range+fade;
-				// only do corners up to (but not including) the "diagonal"
-				
-				int y = (int)(0.5f + world.getHighestBlockYAt(x, z) * fraction + (dropOffY-1) * (1f - fraction));
+				int y = (int)(0.5f + getHighestGroundYAt(world, x, z) * fraction + (dropOffY-1) * (1f - fraction));
 				fillInAboveBelow(world, x, y, z);
 				
 				z = dropOffCenter.getBlockZ()-range-fade;
-				y = (int)(0.5f + world.getHighestBlockYAt(x, z) * fraction + (dropOffY-1) * (1f - fraction));
+				y = (int)(0.5f + getHighestGroundYAt(world, x, z) * fraction + (dropOffY-1) * (1f - fraction));
 				fillInAboveBelow(world, x, y, z);
 			}
 		}
 	}
+	
+	private int getHighestGroundYAt(World world, int x, int z)
+	{
+		int y = world.getHighestBlockYAt(x,  z);
+		Block b = world.getBlockAt(x, y, z);
 		
+		while ( y > world.getSeaLevel() )
+		{
+			if ( b.getType() == Material.GRASS || b.getType() == Material.DIRT || b.getType() == Material.STONE )
+				break;
+
+			y--;
+			b = world.getBlockAt(x, y, z);
+		}
+
+		return y;
+	}
+	
 	private void fillInAboveBelow(World world, int x, int groundY, int z)
 	{
 		int y = groundY-1, maxY = world.getMaxHeight();
