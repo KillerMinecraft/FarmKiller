@@ -147,13 +147,13 @@ public class FarmKiller extends GameMode
 	public boolean isLocationProtected(Location l)
 	{
 		int cy = dropOffCenter.getBlockY(), ly = l.getBlockY();
-		if ( l.getBlockY() < cy - 2 || ly > cy + 5 )
+		if ( l.getBlockY() < cy - 1 || ly > cy + 5 )
 			return false;
 		
 		// the drop-off building is protected
 		int cx =  dropOffCenter.getBlockX(), cz = dropOffCenter.getBlockZ(), lx = l.getBlockX(), lz = l.getBlockZ();
-		if ( lx > cx - 3 && lx < cx + 3
-		  && lz > cz - 3 && lz < cz + 3 )
+		if ( lx > cx - 4 && lx < cx + 4
+		  && lz > cz - 4 && lz < cz + 4 )
 			return true;
 			
 		// the spawn point for each team is also protected 
@@ -170,36 +170,35 @@ public class FarmKiller extends GameMode
 	{
 		final int range = 45, fadeLength = 16;
 		
-		int dropOffY = dropOffCenter.getBlockY();
+		int dropOffX = dropOffCenter.getBlockX(), dropOffY = dropOffCenter.getBlockY(), dropOffZ = dropOffCenter.getBlockZ();
 		World world = dropOffCenter.getWorld();
 		
-		for ( int x=dropOffCenter.getBlockX()-range; x<=dropOffCenter.getBlockX()+range; x++ )
-			for ( int z=dropOffCenter.getBlockZ()-range; z<=dropOffCenter.getBlockZ()+range; z++ )
+		for ( int x=dropOffX-range; x<=dropOffX+range; x++ )
+			for ( int z=dropOffZ-range; z<=dropOffZ+range; z++ )
 				fillInAboveBelow(world, x, dropOffY-1, z);
 		
-		int minZ = dropOffCenter.getBlockZ()-range, maxZ = dropOffCenter.getBlockZ()+range,
-			minX = dropOffCenter.getBlockX()-range, maxX = dropOffCenter.getBlockX()+range;
+		int minZ = dropOffZ-range, maxZ = dropOffZ+range, minX = dropOffX-range, maxX = dropOffX+range;
 		for ( int fade = 1; fade<=fadeLength; fade++ )
 		{
 			float fraction = ((float)fade)/fadeLength;
 			for ( int z=minZ-fade; z<=maxZ+fade; z++ )
 			{
-				int x = dropOffCenter.getBlockX()+range+fade;
+				int x = dropOffX+range+fade;
 				int y = (int)(0.5f + getHighestGroundYAt(world, x, z) * fraction + (dropOffY-1) * (1f - fraction));
 				fillInAboveBelow(world, x, y, z);
 				
-				x = dropOffCenter.getBlockX()-range-fade;
+				x = dropOffX-range-fade;
 				y = (int)(0.5f + getHighestGroundYAt(world, x, z) * fraction + (dropOffY-1) * (1f - fraction));
 				fillInAboveBelow(world, x, y, z);
 			}
 			
 			for ( int x=minX-fade+1; x<maxX+fade; x++ )
 			{
-				int z = dropOffCenter.getBlockZ()+range+fade;
+				int z = dropOffZ+range+fade;
 				int y = (int)(0.5f + getHighestGroundYAt(world, x, z) * fraction + (dropOffY-1) * (1f - fraction));
 				fillInAboveBelow(world, x, y, z);
 				
-				z = dropOffCenter.getBlockZ()-range-fade;
+				z = dropOffZ-range-fade;
 				y = (int)(0.5f + getHighestGroundYAt(world, x, z) * fraction + (dropOffY-1) * (1f - fraction));
 				fillInAboveBelow(world, x, y, z);
 			}
@@ -331,18 +330,18 @@ public class FarmKiller extends GameMode
 		{
 			case 0:
 				if ( numTeams == 3 )
-					return dropOffCenter.add(-34, 0, -20); // for 3 teams, ensure they're equidistant from each other, as well as from the plinth
+					return dropOffCenter.clone().add(-34, 0, -20); // for 3 teams, ensure they're equidistant from each other, as well as from the plinth
 				else
-					return dropOffCenter.add(-40, 0, 0);
+					return dropOffCenter.clone().add(-40, 0, 0);
 			case 1:
 				if ( numTeams == 3 )
-					return dropOffCenter.add(34, 0, -20); // for 3 teams, ensure they're equidistant from each other, as well as from the plinth
+					return dropOffCenter.clone().add(34, 0, -20); // for 3 teams, ensure they're equidistant from each other, as well as from the plinth
 				else
-					return dropOffCenter.add(40, 0, 0);
+					return dropOffCenter.clone().add(40, 0, 0);
 			case 2:
-				return dropOffCenter.add(0, 0, 40);
+				return dropOffCenter.clone().add(0, 0, 40);
 			case 3:
-				return dropOffCenter.add(0, 0, -40);
+				return dropOffCenter.clone().add(0, 0, -40);
 			default:
 				return dropOffCenter;
 		}
