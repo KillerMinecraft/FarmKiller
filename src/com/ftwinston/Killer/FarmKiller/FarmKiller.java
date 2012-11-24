@@ -248,51 +248,55 @@ public class FarmKiller extends GameMode
 	
 	public void createDropOff()
 	{
-		int xmin = dropOffCenter.getBlockX() - 2, xmax = dropOffCenter.getBlockX() + 2;
-		int zmin = dropOffCenter.getBlockZ() - 2, zmax = dropOffCenter.getBlockZ() + 2;
+		int xmin = dropOffCenter.getBlockX() - 3, xmax = dropOffCenter.getBlockX() + 3;
+		int zmin = dropOffCenter.getBlockZ() - 3, zmax = dropOffCenter.getBlockZ() + 3;
 		int ymin = dropOffCenter.getBlockY();
 
 		World w = dropOffCenter.getWorld();
 		
 		// now, generate a hut for the drop-off
-		w.getBlockAt(xmin, ymin, zmin).setType(Material.WOOD_STEP);
-		w.getBlockAt(xmax, ymin, zmin).setType(Material.WOOD_STEP);
-		w.getBlockAt(xmin, ymin, zmax).setType(Material.WOOD_STEP);
-		w.getBlockAt(xmax, ymin, zmax).setType(Material.WOOD_STEP);
-		for ( int x=xmin + 1; x < xmax; x++ )
+		for ( int x=xmin+1; x < xmax; x++ )
+		{
+			w.getBlockAt(x, ymin, zmin + 1).setType(Material.WOOD);
+			w.getBlockAt(x, ymin, zmax - 1).setType(Material.WOOD);
+			
+			w.getBlockAt(x, ymin + 4, zmin + 1).setType(Material.WOOD_STEP);
+			w.getBlockAt(x, ymin + 4, zmax - 1).setType(Material.WOOD_STEP);
+		}
+		
+		for ( int x=xmin; x <= xmax; x++ )
 		{
 			Block b = w.getBlockAt(x, ymin, zmin);
 			b.setType(Material.WOOD_STAIRS);
-			b.setData((byte)0x3);
-
-			w.getBlockAt(x, ymin, zmin + 1).setType(Material.WOOD);
+			b.setData((byte)0x2);
 
 			b = w.getBlockAt(x, ymin, zmax);
 			b.setType(Material.WOOD_STAIRS);
-			b.setData((byte)0x2);
-
-			w.getBlockAt(x, ymin, zmax - 1).setType(Material.WOOD);
+			b.setData((byte)0x3);
 		}
 
-		for ( int z=zmin + 1; z < zmax; z++ )
+		for ( int z=zmin+2 ; z < zmax-1; z++ )
+		{
+			w.getBlockAt(xmin + 1, ymin, z).setType(Material.WOOD);
+			w.getBlockAt(xmax - 1, ymin, z).setType(Material.WOOD);
+
+			w.getBlockAt(xmin + 1, ymin + 4, z).setType(Material.WOOD_STEP);
+			w.getBlockAt(xmax - 1, ymin + 4, z).setType(Material.WOOD_STEP);
+		}
+		
+		for ( int z=zmin; z <= zmax; z++ )
 		{
 			Block b = w.getBlockAt(xmin, ymin, z);
 			b.setType(Material.WOOD_STAIRS);
 			b.setData((byte)0x0);
 
-			w.getBlockAt(xmin + 1, ymin, z).setType(Material.WOOD);
-			w.getBlockAt(xmin + 1, ymin + 4, z).setType(Material.WOOD_STEP);
-
 			b = w.getBlockAt(xmax, ymin, z);
 			b.setType(Material.WOOD_STAIRS);
 			b.setData((byte)0x1);
-
-			w.getBlockAt(xmax - 1, ymin, z).setType(Material.WOOD);
-			w.getBlockAt(xmax - 1, ymin + 4, z).setType(Material.WOOD_STEP);
 		}
 
-		for ( int x=xmin + 2; x < xmax - 1; x++ )
-			for ( int z=zmin + 2; z < zmax - 1; z++ )
+		for ( int x=xmin + 2; x <= xmax - 2; x++ )
+			for ( int z=zmin + 2; z <= zmax - 2; z++ )
 			{
 				w.getBlockAt(x, ymin, z).setType(Material.LAPIS_BLOCK);
 				w.getBlockAt(x, ymin + 4, z).setType(Material.WOOD);
@@ -300,10 +304,10 @@ public class FarmKiller extends GameMode
 
 		for ( int y=ymin+1; y<ymin+4; y++ )
 		{
-			w.getBlockAt(xmin+2, y, zmin+2).setType(Material.FENCE);
-			w.getBlockAt(xmax-2, y, zmin+2).setType(Material.FENCE);
-			w.getBlockAt(xmin+2, y, zmax-2).setType(Material.FENCE);
-			w.getBlockAt(xmax-2, y, zmax-2).setType(Material.FENCE);
+			w.getBlockAt(xmin+1, y, zmin+1).setType(Material.FENCE);
+			w.getBlockAt(xmax-1, y, zmin+1).setType(Material.FENCE);
+			w.getBlockAt(xmin+1, y, zmax-1).setType(Material.FENCE);
+			w.getBlockAt(xmax-1, y, zmax-1).setType(Material.FENCE);
 		}
 
 		w.getBlockAt(dropOffCenter.getBlockX(), ymin + 4, dropOffCenter.getBlockZ()).setType(Material.GLOWSTONE);
