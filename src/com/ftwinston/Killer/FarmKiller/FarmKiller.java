@@ -333,22 +333,31 @@ public class FarmKiller extends GameMode
 
 	private Location getSpawnLocationForTeam(int team)
 	{
+		Location loc;
 		switch ( team )
 		{
 			case 0:
 				if ( numTeams == 3 )
-					return dropOffCenter.clone().add(-34, 0, -20); // for 3 teams, ensure they're equidistant from each other, as well as from the plinth
+					loc = dropOffCenter.clone().add(-34, 0, -20); // for 3 teams, ensure they're equidistant from each other, as well as from the plinth
 				else
-					return dropOffCenter.clone().add(-40, 0, 0);
+					loc = dropOffCenter.clone().add(-40, 0, 0);
+				loc.setYaw(-90);
+				return loc;
 			case 1:
 				if ( numTeams == 3 )
-					return dropOffCenter.clone().add(34, 0, -20); // for 3 teams, ensure they're equidistant from each other, as well as from the plinth
+					loc = dropOffCenter.clone().add(34, 0, -20); // for 3 teams, ensure they're equidistant from each other, as well as from the plinth
 				else
-					return dropOffCenter.clone().add(40, 0, 0);
+					loc = dropOffCenter.clone().add(40, 0, 0);
+				loc.setYaw(90);
+				return loc;
 			case 2:
-				return dropOffCenter.clone().add(0, 0, 40);
+				loc = dropOffCenter.clone().add(0, 0, 40);
+				loc.setYaw(180);
+				return loc;
 			case 3:
-				return dropOffCenter.clone().add(0, 0, -40);
+				loc = dropOffCenter.clone().add(0, 0, -40);
+				loc.setYaw(0);
+				return loc;
 			default:
 				return dropOffCenter;
 		}
