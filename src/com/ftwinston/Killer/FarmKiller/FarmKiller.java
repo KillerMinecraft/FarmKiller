@@ -563,12 +563,15 @@ public class FarmKiller extends GameMode
 		switch ( type )
 		{
 		case WHEAT:
+		case CARROT_ITEM:
+		case POTATO_ITEM:
 		//case SEEDS:
 		//case PUMPKIN_SEEDS:
 		//case MELON_SEEDS:
 		case MELON:
 		case MELON_BLOCK:
 		case PUMPKIN:
+		case APPLE:
 		case SUGAR_CANE:
 		case BROWN_MUSHROOM:
 		case RED_MUSHROOM:
