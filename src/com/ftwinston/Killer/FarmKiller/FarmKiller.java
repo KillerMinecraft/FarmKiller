@@ -139,6 +139,13 @@ public class FarmKiller extends GameMode
 		for ( int team=0; team<numTeams; team++ )
 		{
 			Location spawn = getSpawnLocationForTeam(team);
+			for ( int x = spawn.getBlockX()-2; x<=spawn.getBlockX()+2; x++ )
+				for ( int z = spawn.getBlockZ()-2; z<=spawn.getBlockZ()+2; z++ )
+				{
+					Block b = main.getBlockAt(x, spawn.getBlockY()-1, z); 
+					b.setType(Material.WOOL);
+					b.setData(getTeamWoolColor(team));
+				}
 			spawn.getBlock().getRelative(BlockFace.DOWN).setType(Material.BEDROCK);
 		}
 	}
