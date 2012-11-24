@@ -411,6 +411,7 @@ public class FarmKiller extends GameMode
 	}
 	
 	long[] teamScores;
+	int dayCountProcessID, dayCount = 0, dayLimit = 3;
 	
 	@Override
 	public void gameStarted()
@@ -428,12 +429,53 @@ public class FarmKiller extends GameMode
 			Player player = players.remove(random.nextInt(players.size()));
 			allocatePlayer(player, teamCounts);
 		}
+		
+		broadcastMessage(ChatColor.YELLOW + "Day 1 of " + dayLimit);
+		dayCountProcessID = getPlugin().getServer().getScheduler().scheduleSyncRepeatingTask(getPlugin(), new Runnable() {
+			long lastRun = 0;
+			public void run()
+			{
+				long time = getPlugin().getServer().getWorlds().get(0).getTime();
+				
+				if ( time < lastRun ) // time of day has gone backwards: must be a new day! Allocate the killers
+				{
+					dayCount ++;
+					if ( dayCount >= dayLimit )
+					{
+						endGame();
+						getPlugin().getServer().getScheduler().cancelTask(dayCountProcessID);
+					}
+					else
+						broadcastMessage(ChatColor.YELLOW + "Day " + (dayCount+1) + " of " + dayLimit);
+				}
+				
+				lastRun = time;
+			}
+		}, 600L, 100L); // initial wait: 30s, then check every 5s
+	}
+	
+	private void endGame()
+	{
+		String message = ChatColor.YELLOW + "Time's up! The final scores are:";
+		
+		for ( int i=0; i<teamScores.length; i++ )
+			 message += "\n" + getTeamChatColor(i) + getTeamName(i) + ": " + ChatColor.RESET + teamScores[i] + " points";
+
+		int winningTeam = getHighestIndex(teamScores);
+		message += "\n\nThe " + getTeamChatColor(winningTeam) + getTeamName(winningTeam) + " wins!";
+		
+		broadcastMessage(message);
+		finishGame();
 	}
 	
 	@Override
 	public void gameFinished()
 	{
-		
+		if ( dayCountProcessID != -1 )
+		{
+			getPlugin().getServer().getScheduler().cancelTask(dayCountProcessID);
+			dayCountProcessID = -1;
+		}
 	}
 	
 	@Override
@@ -546,7 +588,7 @@ public class FarmKiller extends GameMode
 		event.getPlayer().sendMessage("Score +" + dropScore);
 		teamScores[team] += dropScore;
 		
-		event.getItemDrop().remove(); // don't actually DROP the item ... should we schedule a brief delay here? Only if 
+		event.getItemDrop().remove(); // don't actually DROP the item ... should we schedule a brief delay here? 
     }
 
 	private boolean isInDropOffArea(Location loc)
