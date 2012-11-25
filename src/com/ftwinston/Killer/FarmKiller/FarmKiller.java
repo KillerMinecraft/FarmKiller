@@ -421,7 +421,7 @@ public class FarmKiller extends GameMode
 			 message += "\n" + getTeamChatColor(i) + getTeamName(i) + ": " + ChatColor.RESET + teamScores[i] + " points";
 
 		int winningTeam = getHighestValueIndex(teamScores);
-		message += "\n\nThe " + getTeamChatColor(winningTeam) + getTeamName(winningTeam) + " wins!";
+		message += "\n\nThe " + getTeamChatColor(winningTeam) + getTeamName(winningTeam) + ChatColor.RESET + " wins!";
 		
 		broadcastMessage(message);
 		finishGame();
