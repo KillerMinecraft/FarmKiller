@@ -544,7 +544,7 @@ public class FarmKiller extends GameMode
 		for ( int i=0; i<stack.getAmount(); i++ )
 			dropScore += getScoreForItem(stack.getType(), team);
 		
-		event.getPlayer().sendMessage("Score +" + dropScore);
+		event.getPlayer().sendMessage(stack.getType().name() + ": score +" + dropScore);
 		teamScores[team] += dropScore;
 		
 		event.getItemDrop().remove(); // don't actually DROP the item ... should we schedule a brief delay here? 
