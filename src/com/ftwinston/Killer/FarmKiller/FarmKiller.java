@@ -108,7 +108,7 @@ public class FarmKiller extends GameMode
 				return "Players have been split into " + numText + "teams. Get farming!\nThe scoreboard shows what team each player is on.";
 			}
 			case 1:
-				String message = "The teams complete to deliver the most farm produce (plants, animals, and eggs - no meat or seeds) to a central depot.";
+				String message = "The teams complete to deliver the most farm produce (plants, meat, eggs, wool and leather - no seeds) to a central depot.";
 				return message;
 				
 			default:
@@ -578,6 +578,15 @@ public class FarmKiller extends GameMode
 		case RED_MUSHROOM:
 		case EGG:
 		case COCOA:
+		case PORK:
+		case RAW_BEEF:
+		case RAW_CHICKEN:
+		case RAW_FISH:
+		case GRILLED_PORK:
+		case COOKED_BEEF:
+		case COOKED_CHICKEN:
+		case COOKED_FISH:
+		case WOOL:
 			return true;
 		default:
 			return false;
