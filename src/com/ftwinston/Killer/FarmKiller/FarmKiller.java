@@ -26,9 +26,6 @@ public class FarmKiller extends GameMode
 {
 	public static final int friendlyFire = 0, diminishingReturns = 1, optionTwoTeams = 2, optionThreeTeams = 3, optionFourTeams = 4;
 
-	@Override
-	public String getName() { return "Farm Killer"; }
-	
 	private int numTeams = 2;
 	
 	@Override
@@ -46,27 +43,6 @@ public class FarmKiller extends GameMode
 		};
 		
 		return options;
-	}
-	
-	@Override
-	public String[] getSignDescription()
-	{
-		return new String[] {
-			"Players are put",
-			"into teams.",
-			"They compete to",
-			"produce crops.",
-			
-			"Crops & animals",
-			"need delivered",
-			"to a central",
-			"drop-off point.",
-			
-			"You respawn,",
-			"so sabotaging",
-			"your opponents",
-			"is recommended!"
-		};
 	}
 	
 	public String getTeamName(int team)
