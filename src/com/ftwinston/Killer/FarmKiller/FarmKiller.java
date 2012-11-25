@@ -338,24 +338,24 @@ public class FarmKiller extends GameMode
 		{
 			case 0:
 				if ( numTeams == 3 )
-					loc = dropOffCenter.clone().add(-34, 0, -20); // for 3 teams, ensure they're equidistant from each other, as well as from the plinth
+					loc = dropOffCenter.clone().add(-34.5, 0, -20.5); // for 3 teams, ensure they're equidistant from each other, as well as from the plinth
 				else
-					loc = dropOffCenter.clone().add(-40, 0, 0);
+					loc = dropOffCenter.clone().add(-40.5, 0, 0.5);
 				loc.setYaw(-90);
 				return loc;
 			case 1:
 				if ( numTeams == 3 )
-					loc = dropOffCenter.clone().add(34, 0, -20); // for 3 teams, ensure they're equidistant from each other, as well as from the plinth
+					loc = dropOffCenter.clone().add(34.5, 0, -20.5); // for 3 teams, ensure they're equidistant from each other, as well as from the plinth
 				else
-					loc = dropOffCenter.clone().add(40, 0, 0);
+					loc = dropOffCenter.clone().add(40.5, 0, 0);
 				loc.setYaw(90);
 				return loc;
 			case 2:
-				loc = dropOffCenter.clone().add(0, 0, 40);
+				loc = dropOffCenter.clone().add(0.5, 0, 40.5);
 				loc.setYaw(180);
 				return loc;
 			case 3:
-				loc = dropOffCenter.clone().add(0, 0, -40);
+				loc = dropOffCenter.clone().add(0.5, 0, -40.5);
 				loc.setYaw(0);
 				return loc;
 			default:
