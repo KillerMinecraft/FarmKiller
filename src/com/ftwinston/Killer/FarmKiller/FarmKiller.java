@@ -369,54 +369,13 @@ public class FarmKiller extends GameMode
 		return getSpawnLocationForTeam(getTeam(player));
 	}
 	
-	private int pickSmallestTeam(int[] teamCounts)
-	{
-		// determining which team(s) have the fewest players in this way means the same one won't always be undersized.
-		boolean[] candidateTeams = new boolean[numTeams];
-		int fewest = 0, numCandidates = 0;
-		for ( int i=0; i<numTeams; i++ )
-		{
-			int num = teamCounts[i];
-			if ( num == fewest )
-			{
-				candidateTeams[i] = true;
-				numCandidates ++;
-			}
-			else if ( num < fewest )
-			{
-				candidateTeams[i] = true;
-				fewest = num;
-				numCandidates = 1;
-				
-				// clear previous candidates
-				for ( int j=0; j<i; j++ )
-					candidateTeams[j] = false;
-			}
-			else
-				candidateTeams[i] = false;
-		}
-		
-		// add them to one of the candidates
-		int candidatesToSkip = random.nextInt(numCandidates);
-		for ( int i=0; i<numTeams; i++ )
-			if ( candidateTeams[i] )
-			{
-				if ( candidatesToSkip == 0 )
-					return i;
-				candidatesToSkip --;
-			}
-		
-		// should never get here, but ... who knows
-		return random.nextInt(teamCounts.length);
-	}
-	
-	long[] teamScores;
+	int[] teamScores;
 	int dayCountProcessID, dayCount = 0, dayLimit = 3;
 	
 	@Override
 	public void gameStarted()
 	{
-		teamScores = new long[numTeams];
+		teamScores = new int[numTeams];
 		for ( int i=0; i<numTeams; i++ )
 			teamScores[i] = 0;
 		scoresForTypes.clear();
@@ -461,7 +420,7 @@ public class FarmKiller extends GameMode
 		for ( int i=0; i<teamScores.length; i++ )
 			 message += "\n" + getTeamChatColor(i) + getTeamName(i) + ": " + ChatColor.RESET + teamScores[i] + " points";
 
-		int winningTeam = getHighestIndex(teamScores);
+		int winningTeam = getHighestValueIndex(teamScores);
 		message += "\n\nThe " + getTeamChatColor(winningTeam) + getTeamName(winningTeam) + " wins!";
 		
 		broadcastMessage(message);
@@ -495,7 +454,7 @@ public class FarmKiller extends GameMode
 
 	private int allocatePlayer(Player player, int[] teamCounts)
 	{
-		int team = pickSmallestTeam(teamCounts);
+		int team = getLowestValueIndex(teamCounts);
 		
 		setTeam(player, team);
 		teamCounts[team] ++;
