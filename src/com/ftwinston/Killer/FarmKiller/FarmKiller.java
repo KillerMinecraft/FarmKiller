@@ -25,8 +25,10 @@ import org.bukkit.Material;
 
 public class FarmKiller extends GameMode
 {
-	public static final int friendlyFire = 0, diminishingReturns = 1, optionTwoTeams = 2, optionThreeTeams = 3, optionFourTeams = 4;
+	public static final int friendlyFire = 0, diminishingReturns = 1, optionTwoTeams = 2, optionThreeTeams = 3, optionFourTeams = 4, optionTwoDays = 5, optionFourDays = 6, optionSixDays = 8, optionEightDays = 9;
 
+	private int[] teamScores;
+	private int dayCountProcessID, dayCount = 0, dayLimit = 4;
 	private int numTeams = 2;
 	
 	@Override
@@ -40,27 +42,14 @@ public class FarmKiller extends GameMode
 			new Option("Diminishing returns on each item type", true),
 			new Option("Two teams", true),
 			new Option("Three teams", false),
-			new Option("Four teams", false)
+			new Option("Four teams", false),
+			new Option("Game lasts for two days", true),
+			new Option("Game lasts for four days", false),
+			new Option("Game lasts for six days", false),
+			new Option("Game lasts for eight days", false)
 		};
 		
 		return options;
-	}
-	
-	public String getTeamName(int team)
-	{
-		switch ( team )
-		{
-		case 0:
-			return "blue team";
-		case 1:
-			return "red team";
-		case 2:
-			return "yellow team";
-		case 3:
-			return "green team";
-		default:
-			return "team #" + team;
-		}
 	}
 	
 	@Override
@@ -80,13 +69,15 @@ public class FarmKiller extends GameMode
 					case 4:
 						numText = "four "; break;
 					default:
-						numText = ""; break;
+						numText = Integer.toString(numTeams); break;
 				}
 				return "Players have been split into " + numText + "teams. Get farming!\nThe scoreboard shows what team each player is on.";
 			}
 			case 1:
-				String message = "The teams complete to deliver the most farm produce (plants, meat, eggs, wool and leather - no seeds) to a central depot.";
-				return message;
+				return "The teams complete to deliver the most farm produce (plants, meat, eggs, wool and leather - no seeds) to a central depot.";
+			
+			case 2:
+				return "At the end of " + dayLimit + " days, the team that has the highest score wins the game.";
 				
 			default:
 				return null;
@@ -346,9 +337,6 @@ public class FarmKiller extends GameMode
 	{
 		return getSpawnLocationForTeam(getTeam(player));
 	}
-	
-	int[] teamScores;
-	int dayCountProcessID, dayCount = 0, dayLimit = 3;
 	
 	@Override
 	public void gameStarted()
@@ -616,9 +604,23 @@ public class FarmKiller extends GameMode
 	public void toggleOption(int num)
 	{
 		super.toggleOption(num);
-		toggleOption_ensureOnlyOneEnabled(num, optionTwoTeams, optionThreeTeams, optionFourTeams);
 		
+		toggleOption_ensureOnlyOneEnabled(num, optionTwoTeams, optionThreeTeams, optionFourTeams);
 		if ( num >= optionTwoTeams && num <= optionFourTeams && getOption(num).isEnabled() )
 			numTeams = num; // change the numTeams value ... it's a happy coincidence that optionTwoTeams = 2, optionThreeTeams = 3, optionFourTeams = 4
+
+		toggleOption_ensureOnlyOneEnabled(num, optionTwoDays, optionFourDays, optionSixDays);
+		if ( num >= optionTwoDays && num <= optionSixDays && getOption(num).isEnabled() )
+			switch ( num )
+			{
+				case optionTwoDays:
+					dayLimit = 2; break;
+				case optionFourDays:
+					dayLimit = 4; break;
+				case optionSixDays:
+					dayLimit = 6; break;
+				case optionEightDays:
+					dayLimit = 8; break;
+			}
 	}
 }
