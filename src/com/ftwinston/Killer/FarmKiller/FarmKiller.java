@@ -10,6 +10,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
+import org.bukkit.World.Environment;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
@@ -96,13 +97,14 @@ public class FarmKiller extends GameMode
 	public boolean teamAllocationIsSecret() { return false; }
 	
 	@Override
-	public boolean usesNether() { return false; }
+	public Environment[] getWorldsToGenerate() { return new Environment[] { Environment.NORMAL }; }
 	
 	private Location dropOffCenter;
 	
 	@Override
-	public void worldGenerationComplete(World main, World nether)
+	public void worldGenerationComplete()
 	{
+		World main = getWorld(0);
 		dropOffCenter = new Location(main, 0, main.getSeaLevel()+10, 0);
 		
 		// create a grassy plain around where the drop off will be
