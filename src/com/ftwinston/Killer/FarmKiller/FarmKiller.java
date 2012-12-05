@@ -25,7 +25,7 @@ import org.bukkit.Material;
 
 public class FarmKiller extends GameMode
 {
-	public static final int friendlyFire = 0, diminishingReturns = 1, optionTwoTeams = 2, optionThreeTeams = 3, optionFourTeams = 4, optionTwoDays = 5, optionFourDays = 6, optionSixDays = 8, optionEightDays = 9;
+	public static final int friendlyFire = 0, diminishingReturns = 1, optionTwoTeams = 2, optionThreeTeams = 3, optionFourTeams = 4, optionAnnounceScores = 5, optionTwoDays = 6, optionFourDays = 7, optionSixDays = 8, optionEightDays = 9;
 
 	private int[] teamScores;
 	private int dayCountProcessID, dayCount = 0, dayLimit = 4;
@@ -43,8 +43,9 @@ public class FarmKiller extends GameMode
 			new Option("Two teams", true),
 			new Option("Three teams", false),
 			new Option("Four teams", false),
-			new Option("Game lasts for two days", true),
-			new Option("Game lasts for four days", false),
+			new Option("Announce scores at the start of each day", true),
+			new Option("Game lasts for two days", false),
+			new Option("Game lasts for four days", true),
 			new Option("Game lasts for six days", false),
 			new Option("Game lasts for eight days", false)
 		};
@@ -78,7 +79,11 @@ public class FarmKiller extends GameMode
 			
 			case 2:
 				return "At the end of " + dayLimit + " days, the team that has the highest score wins the game.";
-				
+
+			case 3:
+				if ( getOption(optionAnnounceScores).isEnabled() )
+					return "The current scores will be announced at the start of each day.";
+					
 			default:
 				return null;
 		}
@@ -371,7 +376,12 @@ public class FarmKiller extends GameMode
 						getPlugin().getServer().getScheduler().cancelTask(dayCountProcessID);
 					}
 					else
-						broadcastMessage(ChatColor.YELLOW + "Day " + (dayCount+1) + " of " + dayLimit);
+					{
+						String message = ChatColor.YELLOW + "Day " + (dayCount+1) + " of " + dayLimit;
+						if ( getOption(optionAnnounceScores).isEnabled() )
+							message += writeCurrentScores();
+						broadcastMessage(message);
+					}
 				}
 				
 				lastRun = time;
@@ -381,16 +391,21 @@ public class FarmKiller extends GameMode
 	
 	private void endGame()
 	{
-		String message = ChatColor.YELLOW + "Time's up! The final scores are:";
-		
+		String message = ChatColor.YELLOW + "Time's up! The final scores are:" + writeCurrentScores();
+		broadcastMessage(message);
+		finishGame();
+	}
+	
+	private String writeCurrentScores()
+	{
+		String message = "";
 		for ( int i=0; i<teamScores.length; i++ )
 			 message += "\n" + getTeamChatColor(i) + getTeamName(i) + ": " + ChatColor.RESET + teamScores[i] + " points";
 
 		int winningTeam = getHighestValueIndex(teamScores);
 		message += "\n\nThe " + getTeamChatColor(winningTeam) + getTeamName(winningTeam) + ChatColor.RESET + " wins!";
 		
-		broadcastMessage(message);
-		finishGame();
+		return message;
 	}
 	
 	@Override
@@ -609,7 +624,7 @@ public class FarmKiller extends GameMode
 		if ( num >= optionTwoTeams && num <= optionFourTeams && getOption(num).isEnabled() )
 			numTeams = num; // change the numTeams value ... it's a happy coincidence that optionTwoTeams = 2, optionThreeTeams = 3, optionFourTeams = 4
 
-		toggleOption_ensureOnlyOneEnabled(num, optionTwoDays, optionFourDays, optionSixDays);
+		toggleOption_ensureOnlyOneEnabled(num, optionTwoDays, optionFourDays, optionSixDays, optionEightDays);
 		if ( num >= optionTwoDays && num <= optionSixDays && getOption(num).isEnabled() )
 			switch ( num )
 			{
