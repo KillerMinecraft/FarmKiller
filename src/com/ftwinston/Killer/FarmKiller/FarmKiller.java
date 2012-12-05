@@ -613,38 +613,12 @@ public class FarmKiller extends GameMode
 	}
 
 	@Override
-	public boolean toggleOption(int num)
+	public void toggleOption(int num)
 	{
-		boolean retVal = super.toggleOption(num);
+		super.toggleOption(num);
+		toggleOption_ensureOnlyOneEnabled(num, optionTwoTeams, optionThreeTeams, optionFourTeams);
 		
-		int firstTeamOption = optionTwoTeams, lastTeamOption = optionFourTeams;
-		if ( num < optionTwoTeams || num > optionFourTeams )
-			return retVal;
-		
-		if ( retVal )
-		{// turned on; turn the others off
-			for ( int i=firstTeamOption; i<=lastTeamOption; i++ )
-				if ( i != num )
-					getOption(i).setEnabled(false);
-			
-			// change the numTeams value ... it's a happy coincidence that optionTwoTeams = 2, optionThreeTeams = 3, optionFourTeams = 4
-			numTeams = num;
-		}
-		else
-		{// turned off; if all are off, turn this one back on
-			boolean allOff = true;
-			for ( int i=optionTwoTeams; i<=lastTeamOption; i++ )
-				if ( getOption(i).isEnabled() )
-				{
-					allOff = false;
-					break;
-				}
-			if ( allOff )
-			{
-				getOption(num).setEnabled(true);
-				retVal = true;
-			}
-		}
-		return retVal;
+		if ( num >= optionTwoTeams && num <= optionFourTeams && getOption(num).isEnabled() )
+			numTeams = num; // change the numTeams value ... it's a happy coincidence that optionTwoTeams = 2, optionThreeTeams = 3, optionFourTeams = 4
 	}
 }
