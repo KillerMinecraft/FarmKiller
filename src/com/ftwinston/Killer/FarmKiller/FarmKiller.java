@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.ftwinston.Killer.GameMode;
+import com.ftwinston.Killer.Option;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -575,6 +576,7 @@ public class FarmKiller extends GameMode
 	}
 	
 	static final long startingScoreForType = 100, minScoreForType = 50;
+
 	Map<Material, Long> scoresForTypes = new HashMap<Material, Long>();
 	private long getScoreForItem(Material type, int team)
 	{
@@ -620,11 +622,11 @@ public class FarmKiller extends GameMode
 	{
 		super.toggleOption(num);
 		
-		toggleOption_ensureOnlyOneEnabled(num, optionTwoTeams, optionThreeTeams, optionFourTeams);
+		Option.ensureOnlyOneEnabled(getOptions(), num, optionTwoTeams, optionThreeTeams, optionFourTeams);
 		if ( num >= optionTwoTeams && num <= optionFourTeams && getOption(num).isEnabled() )
 			numTeams = num; // change the numTeams value ... it's a happy coincidence that optionTwoTeams = 2, optionThreeTeams = 3, optionFourTeams = 4
 
-		toggleOption_ensureOnlyOneEnabled(num, optionTwoDays, optionFourDays, optionSixDays, optionEightDays);
+		Option.ensureOnlyOneEnabled(getOptions(), num, optionTwoDays, optionFourDays, optionSixDays, optionEightDays);
 		if ( num >= optionTwoDays && num <= optionSixDays && getOption(num).isEnabled() )
 			switch ( num )
 			{
