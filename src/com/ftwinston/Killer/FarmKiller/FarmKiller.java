@@ -3,26 +3,33 @@ package com.ftwinston.Killer.FarmKiller;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import com.ftwinston.Killer.GameMode;
 import com.ftwinston.Killer.Option;
 
+import net.minecraft.server.ChunkCoordinates;
+
 import org.bukkit.ChatColor;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.World.Environment;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.generator.BlockPopulator;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.Material;
+
+import org.bukkit.craftbukkit.CraftChunk;
+import org.bukkit.craftbukkit.CraftWorld;
 
 public class FarmKiller extends GameMode
 {
@@ -82,6 +89,9 @@ public class FarmKiller extends GameMode
 				return "At the end of " + dayLimit + " days, the team that has the highest score wins the game.";
 
 			case 3:
+				return "You will respawn at your base when you die.";
+				
+			case 4:
 				if ( getOption(optionAnnounceScores).isEnabled() )
 					return "The current scores will be announced at the start of each day.";
 					
@@ -96,32 +106,283 @@ public class FarmKiller extends GameMode
 	@Override
 	public Environment[] getWorldsToGenerate() { return new Environment[] { Environment.NORMAL }; }
 	
-	private Location dropOffCenter;
+	private Location dropOffCenter = null;
 	
 	@Override
-	public void worldGenerationComplete()
+	public BlockPopulator[] getExtraBlockPopulators(int worldNumber)
 	{
-		World main = getWorld(0);
-		dropOffCenter = new Location(main, 0, main.getSeaLevel()+10, 0);
+		if ( worldNumber != 0 )
+			return null;
 		
-		// create a grassy plain around where the drop off will be
-		createFlatSurface();
-		
-		// generate the central drop-off point itself
-		createDropOff();
+		return new BlockPopulator[] { new PlateauGenerator() };
+	}
 	
-		// generate spawn points for each team
-		for ( int team=0; team<numTeams; team++ )
+	class PlateauGenerator extends BlockPopulator
+	{
+		int cDropOffX, cDropOffZ, cMinX, cMaxX, cMinZ, cMaxZ;		
+		
+		@Override
+		public void populate(World w, Random r, Chunk c)
 		{
-			Location spawn = getSpawnLocationForTeam(team);
-			for ( int x = spawn.getBlockX()-2; x<=spawn.getBlockX()+2; x++ )
-				for ( int z = spawn.getBlockZ()-2; z<=spawn.getBlockZ()+2; z++ )
+			if ( dropOffCenter == null )
+			{
+				ChunkCoordinates dropOff = ((CraftWorld)w).getHandle().getSpawn();
+				cDropOffX = dropOff.x >> 4; cDropOffZ = dropOff.z >> 4;
+				
+				dropOffCenter = new Location(w, cDropOffX * 16 + 7, w.getSeaLevel() + 10, cDropOffZ * 16 + 7);
+				
+				cMinX = cDropOffX - 4; cMaxX = cDropOffX + 4;
+				cMinZ = cDropOffZ - 4; cMaxZ = cDropOffZ + 4;
+			}
+			
+			int cx = c.getX(), cz = c.getZ();
+			if ( cx < cMinX || cx > cMaxX || cz < cMinZ || cz > cMaxZ)
+				return;
+
+			// create a grassy plain around where the drop off will be, fading to the height of the "underlying" world at the edges
+			if ( cx == cMinX || cx == cMaxX || cz == cMinZ || cz == cMaxZ )
+				createSlope(c);
+			else
+				createFlatSurface(c);
+			
+			// generate the central drop-off point itself
+			if ( c.getX() == cDropOffX && c.getZ() == cDropOffZ )
+				createDropOffPoint(c);
+			
+			// generate spawn points for each team
+			for ( int team=0; team<numTeams; team++ )
+			{
+				Location spawn = getSpawnLocationForTeam(team);
+				if ( spawn.getChunk() == c )
 				{
-					Block b = main.getBlockAt(x, spawn.getBlockY()-1, z); 
-					b.setType(Material.WOOL);
-					b.setData(getTeamWoolColor(team));
+					int spawnX = spawn.getBlockX() & 15, spawnY = spawn.getBlockY() - 1, spawnZ = spawn.getBlockZ() & 15;
+					
+					for ( int x = spawnX-2; x<=spawnX+2; x++ )
+						for ( int z = spawnZ-2; z<=spawnZ+2; z++ )
+						{
+							Block b = c.getBlock(x, spawnY, z);
+							
+							b.setType(Material.WOOL);
+							b.setData(getTeamWoolColor(team));
+						}
+					c.getBlock(spawnX, spawnY, spawnZ).setType(Material.BEDROCK);
 				}
-			spawn.getBlock().getRelative(BlockFace.DOWN).setType(Material.BEDROCK);
+			}
+		}
+		
+		public void createFlatSurface(Chunk c)
+		{
+			int plateauY = dropOffCenter.getBlockY() - 1;
+			for ( int x=0; x<16; x++ )
+				for ( int z=0; z<16; z++ )
+					fillInAboveBelow(c, x, plateauY, z);
+		}
+		
+		public void createSlope(Chunk c)
+		{	
+			int cx = c.getX(), cz = c.getZ(), plateauY = dropOffCenter.getBlockY() - 1;
+			
+			if ( cx == cMinX )
+			{
+				if ( cz == cMinZ )
+					for ( int x=0; x<16; x++ )
+						for ( int z=0; z<16; z++ )
+						{
+							float fraction = Math.max(((float)15-x)/16, ((float)15-z)/16);	
+							int y = (int)(0.5f + getHighestGroundYAt(c, x, z) * fraction + (plateauY) * (1f - fraction));
+							fillInAboveBelow(c, x, y, z);
+						}
+				else if ( cz == cMaxZ )
+					for ( int x=0; x<16; x++ )
+						for ( int z=0; z<16; z++ )
+						{
+							float fraction = Math.max(((float)15-x)/16, ((float)z)/16);	
+							int y = (int)(0.5f + getHighestGroundYAt(c, x, z) * fraction + (plateauY) * (1f - fraction));
+							fillInAboveBelow(c, x, y, z);
+						}
+				else
+					for ( int x=0; x<16; x++ )
+					{
+						float fraction = ((float)15-x)/16;
+						for ( int z=0; z<16; z++ )
+						{
+							int y = (int)(0.5f + getHighestGroundYAt(c, x, z) * fraction + (plateauY) * (1f - fraction));
+							fillInAboveBelow(c, x, y, z);
+						}
+					}
+			}
+			else if ( cx == cMaxX )
+			{
+				if ( cz == cMinZ )
+					for ( int x=0; x<16; x++ )
+						for ( int z=0; z<16; z++ )
+						{
+							float fraction = Math.max(((float)x)/16, ((float)15-z)/16);	
+							int y = (int)(0.5f + getHighestGroundYAt(c, x, z) * fraction + (plateauY) * (1f - fraction));
+							fillInAboveBelow(c, x, y, z);
+						}
+				else if ( cz == cMaxZ )
+					for ( int x=0; x<16; x++ )
+						for ( int z=0; z<16; z++ )
+						{
+							float fraction = Math.max(((float)x)/16, ((float)z)/16);	
+							int y = (int)(0.5f + getHighestGroundYAt(c, x, z) * fraction + (plateauY) * (1f - fraction));
+							fillInAboveBelow(c, x, y, z);
+						}
+				else
+					for ( int x=0; x<16; x++ )
+					{
+						float fraction = ((float)x)/16;
+						for ( int z=0; z<16; z++ )
+						{
+							int y = (int)(0.5f + getHighestGroundYAt(c, x, z) * fraction + (plateauY) * (1f - fraction));
+							fillInAboveBelow(c, x, y, z);
+						}
+					}
+			}
+			else if ( cz == cMinZ )
+				for ( int z=0; z<16; z++ )
+				{
+					float fraction = ((float)15-z)/16;
+					for ( int x=0; x<16; x++ )
+					{
+						int y = (int)(0.5f + getHighestGroundYAt(c, x, z) * fraction + (plateauY) * (1f - fraction));
+						fillInAboveBelow(c, x, y, z);
+					}
+				}
+			else if ( cz == cMaxZ )
+				for ( int z=0; z<16; z++ )
+				{
+					float fraction = ((float)z)/16;
+					for ( int x=0; x<16; x++ )
+					{
+						int y = (int)(0.5f + getHighestGroundYAt(c, x, z) * fraction + (plateauY) * (1f - fraction));
+						fillInAboveBelow(c, x, y, z);
+					}
+				}
+				
+		}
+		
+		public int getHighestBlockYAt(Chunk c, int x, int z)
+		{
+			return ((CraftChunk)c).getHandle().b(x & 15, z & 15);
+		}
+		
+		private int getHighestGroundYAt(Chunk c, int x, int z)
+		{	
+			int y = getHighestBlockYAt(c, x, z);
+			x = x & 15; z = z & 15;
+			Block b = c.getBlock(x, y, z);
+			
+			int seaLevel = c.getWorld().getSeaLevel();
+			while ( y > seaLevel )
+			{
+				if ( b.getType() == Material.GRASS || b.getType() == Material.DIRT || b.getType() == Material.STONE || b.getType() == Material.SAND || b.getType() == Material.GRAVEL || b.getType() == Material.BEDROCK )
+					break;
+
+				y--;
+				b = c.getBlock(x, y, z);
+			}
+
+			return y;
+		}
+		
+		private void fillInAboveBelow(Chunk c, int x, int groundY, int z)
+		{
+			int y = groundY-1, maxY = c.getWorld().getMaxHeight();
+			Block b = c.getBlock(x, y, z);
+			do
+			{
+				b.setType(Material.DIRT);
+				
+				y--;
+				b = c.getBlock(x, y, z);
+			}
+			while ( b.getType() != Material.DIRT && b.getType() != Material.STONE &&  b.getType() != Material.SAND && b.getType() != Material.GRAVEL && b.getType() != Material.BEDROCK );
+			
+			int prevMaxY = getHighestBlockYAt(c, x, z);
+			for ( y=prevMaxY; y<groundY; y++ )
+				c.getBlock(x,y,z).setType(Material.DIRT);
+			
+			c.getBlock(x,groundY,z).setType(Material.GRASS);
+			
+			for ( y=groundY+1; y<maxY; y++ )
+			{
+				b = c.getBlock(x,y,z);
+				if ( b.getType() != Material.LEAVES && b.getType() != Material.LOG )
+					b.setType(Material.AIR);
+			}
+		}
+		
+		public void createDropOffPoint(Chunk c)
+		{
+			int xmin = dropOffCenter.getBlockX() - 3, xmax = dropOffCenter.getBlockX() + 3;
+			int zmin = dropOffCenter.getBlockZ() - 3, zmax = dropOffCenter.getBlockZ() + 3;
+			int ymin = dropOffCenter.getBlockY();
+
+			// now, generate a hut for the drop-off
+			for ( int x=xmin+1; x < xmax; x++ )
+			{
+				c.getBlock(x, ymin, zmin + 1).setType(Material.WOOD);
+				c.getBlock(x, ymin, zmax - 1).setType(Material.WOOD);
+				
+				c.getBlock(x, ymin + 4, zmin + 1).setType(Material.WOOD_STEP);
+				c.getBlock(x, ymin + 4, zmax - 1).setType(Material.WOOD_STEP);
+			}
+			
+			for ( int x=xmin; x <= xmax; x++ )
+			{
+				Block b = c.getBlock(x, ymin, zmin);
+				b.setType(Material.WOOD_STAIRS);
+				b.setData((byte)0x2);
+
+				b = c.getBlock(x, ymin, zmax);
+				b.setType(Material.WOOD_STAIRS);
+				b.setData((byte)0x3);
+			}
+
+			for ( int z=zmin+2 ; z < zmax-1; z++ )
+			{
+				c.getBlock(xmin + 1, ymin, z).setType(Material.WOOD);
+				c.getBlock(xmax - 1, ymin, z).setType(Material.WOOD);
+
+				c.getBlock(xmin + 1, ymin + 4, z).setType(Material.WOOD_STEP);
+				c.getBlock(xmax - 1, ymin + 4, z).setType(Material.WOOD_STEP);
+			}
+			
+			for ( int z=zmin; z <= zmax; z++ )
+			{
+				Block b = c.getBlock(xmin, ymin, z);
+				b.setType(Material.WOOD_STAIRS);
+				b.setData((byte)0x0);
+
+				b = c.getBlock(xmax, ymin, z);
+				b.setType(Material.WOOD_STAIRS);
+				b.setData((byte)0x1);
+			}
+
+			for ( int x=xmin + 2; x <= xmax - 2; x++ )
+				for ( int z=zmin + 2; z <= zmax - 2; z++ )
+				{
+					c.getBlock(x, ymin, z).setType(Material.LAPIS_BLOCK);
+					c.getBlock(x, ymin + 4, z).setType(Material.WOOD);
+				}
+
+			for ( int y=ymin+1; y<ymin+4; y++ )
+			{
+				c.getBlock(xmin+1, y, zmin+1).setType(Material.FENCE);
+				c.getBlock(xmax-1, y, zmin+1).setType(Material.FENCE);
+				c.getBlock(xmin+1, y, zmax-1).setType(Material.FENCE);
+				c.getBlock(xmax-1, y, zmax-1).setType(Material.FENCE);
+			}
+
+			c.getBlock(dropOffCenter.getBlockX(), ymin + 4, dropOffCenter.getBlockZ()).setType(Material.GLOWSTONE);
+			c.getBlock(dropOffCenter.getBlockX(), ymin + 5, dropOffCenter.getBlockZ()).setType(Material.WOOD_STEP);
+
+			c.getBlock(xmin + 2, ymin + 5, zmin + 2).setType(Material.TORCH);
+			c.getBlock(xmax - 2, ymin + 5, zmin + 2).setType(Material.TORCH);
+			c.getBlock(xmin + 2, ymin + 5, zmax - 2).setType(Material.TORCH);
+			c.getBlock(xmax - 2, ymin + 5, zmax - 2).setType(Material.TORCH);
 		}
 	}
 	
@@ -148,158 +409,6 @@ public class FarmKiller extends GameMode
 		return false;
 	}
 	
-	public void createFlatSurface()
-	{
-		final int range = 45, fadeLength = 16;
-		
-		int dropOffX = dropOffCenter.getBlockX(), dropOffY = dropOffCenter.getBlockY(), dropOffZ = dropOffCenter.getBlockZ();
-		World world = dropOffCenter.getWorld();
-		
-		for ( int x=dropOffX-range; x<=dropOffX+range; x++ )
-			for ( int z=dropOffZ-range; z<=dropOffZ+range; z++ )
-				fillInAboveBelow(world, x, dropOffY-1, z);
-		
-		int minZ = dropOffZ-range, maxZ = dropOffZ+range, minX = dropOffX-range, maxX = dropOffX+range;
-		for ( int fade = 1; fade<=fadeLength; fade++ )
-		{
-			float fraction = ((float)fade)/fadeLength;
-			for ( int z=minZ-fade; z<=maxZ+fade; z++ )
-			{
-				int x = dropOffX+range+fade;
-				int y = (int)(0.5f + getHighestGroundYAt(world, x, z) * fraction + (dropOffY-1) * (1f - fraction));
-				fillInAboveBelow(world, x, y, z);
-				
-				x = dropOffX-range-fade;
-				y = (int)(0.5f + getHighestGroundYAt(world, x, z) * fraction + (dropOffY-1) * (1f - fraction));
-				fillInAboveBelow(world, x, y, z);
-			}
-			
-			for ( int x=minX-fade+1; x<maxX+fade; x++ )
-			{
-				int z = dropOffZ+range+fade;
-				int y = (int)(0.5f + getHighestGroundYAt(world, x, z) * fraction + (dropOffY-1) * (1f - fraction));
-				fillInAboveBelow(world, x, y, z);
-				
-				z = dropOffZ-range-fade;
-				y = (int)(0.5f + getHighestGroundYAt(world, x, z) * fraction + (dropOffY-1) * (1f - fraction));
-				fillInAboveBelow(world, x, y, z);
-			}
-		}
-	}
-	
-	private int getHighestGroundYAt(World world, int x, int z)
-	{
-		int y = world.getHighestBlockYAt(x,  z);
-		Block b = world.getBlockAt(x, y, z);
-		
-		while ( y > world.getSeaLevel() )
-		{
-			if ( b.getType() == Material.GRASS || b.getType() == Material.DIRT || b.getType() == Material.STONE )
-				break;
-
-			y--;
-			b = world.getBlockAt(x, y, z);
-		}
-
-		return y;
-	}
-	
-	private void fillInAboveBelow(World world, int x, int groundY, int z)
-	{
-		int y = groundY-1, maxY = world.getMaxHeight();
-		Block b = world.getBlockAt(x, y, z);
-		do
-		{
-			b.setType(Material.DIRT);
-			
-			y--;
-			b = world.getBlockAt(x, y, z);
-		}
-		while ( b.getType() != Material.DIRT && b.getType() != Material.STONE && b.getType() != Material.BEDROCK );
-		
-		int prevMaxY = world.getHighestBlockAt(x, z).getY();
-		for ( y=prevMaxY; y<groundY; y++ )
-			world.getBlockAt(x,y,z).setType(Material.DIRT);
-		
-		world.getBlockAt(x,groundY,z).setType(Material.GRASS);
-		
-		for ( y=groundY+1; y<maxY; y++ )
-			world.getBlockAt(x,y,z).setType(Material.AIR);
-	}
-	
-	public void createDropOff()
-	{
-		int xmin = dropOffCenter.getBlockX() - 3, xmax = dropOffCenter.getBlockX() + 3;
-		int zmin = dropOffCenter.getBlockZ() - 3, zmax = dropOffCenter.getBlockZ() + 3;
-		int ymin = dropOffCenter.getBlockY();
-
-		World w = dropOffCenter.getWorld();
-		
-		// now, generate a hut for the drop-off
-		for ( int x=xmin+1; x < xmax; x++ )
-		{
-			w.getBlockAt(x, ymin, zmin + 1).setType(Material.WOOD);
-			w.getBlockAt(x, ymin, zmax - 1).setType(Material.WOOD);
-			
-			w.getBlockAt(x, ymin + 4, zmin + 1).setType(Material.WOOD_STEP);
-			w.getBlockAt(x, ymin + 4, zmax - 1).setType(Material.WOOD_STEP);
-		}
-		
-		for ( int x=xmin; x <= xmax; x++ )
-		{
-			Block b = w.getBlockAt(x, ymin, zmin);
-			b.setType(Material.WOOD_STAIRS);
-			b.setData((byte)0x2);
-
-			b = w.getBlockAt(x, ymin, zmax);
-			b.setType(Material.WOOD_STAIRS);
-			b.setData((byte)0x3);
-		}
-
-		for ( int z=zmin+2 ; z < zmax-1; z++ )
-		{
-			w.getBlockAt(xmin + 1, ymin, z).setType(Material.WOOD);
-			w.getBlockAt(xmax - 1, ymin, z).setType(Material.WOOD);
-
-			w.getBlockAt(xmin + 1, ymin + 4, z).setType(Material.WOOD_STEP);
-			w.getBlockAt(xmax - 1, ymin + 4, z).setType(Material.WOOD_STEP);
-		}
-		
-		for ( int z=zmin; z <= zmax; z++ )
-		{
-			Block b = w.getBlockAt(xmin, ymin, z);
-			b.setType(Material.WOOD_STAIRS);
-			b.setData((byte)0x0);
-
-			b = w.getBlockAt(xmax, ymin, z);
-			b.setType(Material.WOOD_STAIRS);
-			b.setData((byte)0x1);
-		}
-
-		for ( int x=xmin + 2; x <= xmax - 2; x++ )
-			for ( int z=zmin + 2; z <= zmax - 2; z++ )
-			{
-				w.getBlockAt(x, ymin, z).setType(Material.LAPIS_BLOCK);
-				w.getBlockAt(x, ymin + 4, z).setType(Material.WOOD);
-			}
-
-		for ( int y=ymin+1; y<ymin+4; y++ )
-		{
-			w.getBlockAt(xmin+1, y, zmin+1).setType(Material.FENCE);
-			w.getBlockAt(xmax-1, y, zmin+1).setType(Material.FENCE);
-			w.getBlockAt(xmin+1, y, zmax-1).setType(Material.FENCE);
-			w.getBlockAt(xmax-1, y, zmax-1).setType(Material.FENCE);
-		}
-
-		w.getBlockAt(dropOffCenter.getBlockX(), ymin + 4, dropOffCenter.getBlockZ()).setType(Material.GLOWSTONE);
-		w.getBlockAt(dropOffCenter.getBlockX(), ymin + 5, dropOffCenter.getBlockZ()).setType(Material.WOOD_STEP);
-
-		w.getBlockAt(xmin + 2, ymin + 5, zmin + 2).setType(Material.TORCH);
-		w.getBlockAt(xmax - 2, ymin + 5, zmin + 2).setType(Material.TORCH);
-		w.getBlockAt(xmin + 2, ymin + 5, zmax - 2).setType(Material.TORCH);
-		w.getBlockAt(xmax - 2, ymin + 5, zmax - 2).setType(Material.TORCH);
-	}
-	
 	@Override
 	public boolean isAllowedToRespawn(Player player) { return true; }
 	
@@ -313,24 +422,24 @@ public class FarmKiller extends GameMode
 		{
 			case 0:
 				if ( numTeams == 3 )
-					loc = dropOffCenter.clone().add(-34.5, 0, -20.5); // for 3 teams, ensure they're equidistant from each other, as well as from the plinth
+					loc = dropOffCenter.clone().add(-35.5, 0, -20.5); // for 3 teams, ensure they're equidistant from each other, as well as from the plinth
 				else
-					loc = dropOffCenter.clone().add(-40.5, 0, 0.5);
+					loc = dropOffCenter.clone().add(-43.5, 0, 0.5);
 				loc.setYaw(-90);
 				return loc;
 			case 1:
 				if ( numTeams == 3 )
-					loc = dropOffCenter.clone().add(34.5, 0, -20.5); // for 3 teams, ensure they're equidistant from each other, as well as from the plinth
+					loc = dropOffCenter.clone().add(35.5, 0, -20.5); // for 3 teams, ensure they're equidistant from each other, as well as from the plinth
 				else
-					loc = dropOffCenter.clone().add(40.5, 0, 0);
+					loc = dropOffCenter.clone().add(43.5, 0, 0);
 				loc.setYaw(90);
 				return loc;
 			case 2:
-				loc = dropOffCenter.clone().add(0.5, 0, 40.5);
+				loc = dropOffCenter.clone().add(0.5, 0, 43.5);
 				loc.setYaw(180);
 				return loc;
 			case 3:
-				loc = dropOffCenter.clone().add(0.5, 0, -40.5);
+				loc = dropOffCenter.clone().add(0.5, 0, -43.5);
 				loc.setYaw(0);
 				return loc;
 			default:
