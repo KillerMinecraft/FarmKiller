@@ -320,6 +320,10 @@ public class FarmKiller extends GameMode
 			int zmin = dropOffCenter.getBlockZ() - 3, zmax = dropOffCenter.getBlockZ() + 3;
 			int ymin = dropOffCenter.getBlockY();
 
+			for ( int x=xmin-4; x <= xmax + 4; x++ )
+				for ( int z=zmin-4; z <= zmax + 4; z++ )
+					c.getBlock(x, ymin-1, z).setType(Material.GRAVEL);
+			
 			// now, generate a hut for the drop-off
 			for ( int x=xmin+1; x < xmax; x++ )
 			{
