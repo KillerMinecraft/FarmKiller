@@ -138,7 +138,7 @@ public class FarmKiller extends GameMode
 			int cx = c.getX(), cz = c.getZ();
 			if ( cx < cMinX || cx > cMaxX || cz < cMinZ || cz > cMaxZ)
 				return;
-
+			
 			// create a grassy plain around where the drop off will be, fading to the height of the "underlying" world at the edges
 			if ( cx == cMinX || cx == cMaxX || cz == cMinZ || cz == cMaxZ )
 				createSlope(c);
@@ -307,11 +307,7 @@ public class FarmKiller extends GameMode
 			c.getBlock(x,groundY,z).setType(Material.GRASS);
 			
 			for ( y=groundY+1; y<maxY; y++ )
-			{
-				b = c.getBlock(x,y,z);
-				if ( b.getType() != Material.LEAVES && b.getType() != Material.LOG )
-					b.setType(Material.AIR);
-			}
+				c.getBlock(x,y,z).setType(Material.AIR);
 		}
 		
 		public void createDropOffPoint(Chunk c)
