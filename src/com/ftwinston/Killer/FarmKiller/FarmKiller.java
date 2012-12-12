@@ -20,6 +20,7 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
@@ -116,6 +117,18 @@ public class FarmKiller extends GameMode
 		
 		return new BlockPopulator[] { new PlateauGenerator() };
 	}
+	
+	@Override
+	public void worldGenerationComplete()
+	{
+		// leave it for a few seconds
+		getScheduler().runTaskLater(getPlugin(), new Runnable() {
+			public void run() {
+				generating = false;
+			}
+		}, 60);
+	}
+	boolean generating = true;
 	
 	class PlateauGenerator extends BlockPopulator
 	{
@@ -386,6 +399,20 @@ public class FarmKiller extends GameMode
 		}
 	}
 	
+	@EventHandler
+    public void onItemSpawn(ItemSpawnEvent event)
+    {
+		if ( shouldIgnoreEvent(event.getLocation()) || !generating )
+			return;
+		
+		Location loc = event.getLocation();
+		if ( loc.getX() > dropOffCenter.getX() - 80 && loc.getX() < dropOffCenter.getX() + 80
+		  && loc.getZ() > dropOffCenter.getZ() - 80 && loc.getZ() < dropOffCenter.getZ() + 80 )
+		{
+    		event.setCancelled(true);
+		}
+    }
+	
 	@Override
 	public boolean isLocationProtected(Location l)
 	{
@@ -471,7 +498,7 @@ public class FarmKiller extends GameMode
 		}
 		
 		broadcastMessage(ChatColor.YELLOW + "Day 1 of " + dayLimit);
-		dayCountProcessID = getPlugin().getServer().getScheduler().scheduleSyncRepeatingTask(getPlugin(), new Runnable() {
+		dayCountProcessID = getScheduler().scheduleSyncRepeatingTask(getPlugin(), new Runnable() {
 			long lastRun = 0;
 			public void run()
 			{
@@ -483,7 +510,7 @@ public class FarmKiller extends GameMode
 					if ( dayCount >= dayLimit )
 					{
 						endGame();
-						getPlugin().getServer().getScheduler().cancelTask(dayCountProcessID);
+						getScheduler().cancelTask(dayCountProcessID);
 					}
 					else
 					{
@@ -523,7 +550,7 @@ public class FarmKiller extends GameMode
 	{
 		if ( dayCountProcessID != -1 )
 		{
-			getPlugin().getServer().getScheduler().cancelTask(dayCountProcessID);
+			getScheduler().cancelTask(dayCountProcessID);
 			dayCountProcessID = -1;
 		}
 	}
@@ -585,7 +612,7 @@ public class FarmKiller extends GameMode
 	public void onPlayerRespawn(PlayerRespawnEvent event)
 	{
 		final Player player = event.getPlayer();
-		getPlugin().getServer().getScheduler().scheduleSyncDelayedTask(getPlugin(), new Runnable() {
+		getScheduler().scheduleSyncDelayedTask(getPlugin(), new Runnable() {
 			public void run() {
 				equipPlayer(player, getTeam(player));
 			}
