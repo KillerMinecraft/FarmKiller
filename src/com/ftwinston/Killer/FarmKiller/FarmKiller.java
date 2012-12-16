@@ -118,16 +118,6 @@ public class FarmKiller extends GameMode
 		return new BlockPopulator[] { new PlateauGenerator() };
 	}
 	
-	@Override
-	public void worldGenerationComplete()
-	{
-		// leave it for a few seconds
-		getScheduler().runTaskLater(getPlugin(), new Runnable() {
-			public void run() {
-				generating = false;
-			}
-		}, 60);
-	}
 	boolean generating = true;
 	
 	class PlateauGenerator extends BlockPopulator
@@ -479,10 +469,27 @@ public class FarmKiller extends GameMode
 	{
 		return getSpawnLocationForTeam(getTeam(player));
 	}
+
+	@Override
+	public void initializeGame(boolean isNewWorlds)
+	{
+		if ( isNewWorlds )
+		{
+			generating = true;
+			dropOffCenter = null;
+		}
+	}
 	
 	@Override
-	public void gameStarted()
+	public void gameStarted(boolean isNewWorlds)
 	{
+		// don't let drops spawn on the plateau for a couple of seconds
+		getScheduler().runTaskLater(getPlugin(), new Runnable() {
+			public void run() {
+				generating = false;
+			}
+		}, 60);
+				
 		teamScores = new int[numTeams];
 		for ( int i=0; i<numTeams; i++ )
 			teamScores[i] = 0;
