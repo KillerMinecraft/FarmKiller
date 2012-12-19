@@ -6,7 +6,9 @@ import java.util.Map;
 import java.util.Random;
 
 import com.ftwinston.Killer.GameMode;
+import com.ftwinston.Killer.Helper;
 import com.ftwinston.Killer.Option;
+import com.ftwinston.Killer.PlayerFilter;
 
 import net.minecraft.server.ChunkCoordinates;
 
@@ -467,7 +469,7 @@ public class FarmKiller extends GameMode
 	@Override
 	public Location getSpawnLocation(Player player)
 	{
-		return getSpawnLocationForTeam(getTeam(player));
+		return getSpawnLocationForTeam(Helper.getTeam(player));
 	}
 
 	@Override
@@ -546,7 +548,7 @@ public class FarmKiller extends GameMode
 		for ( int i=0; i<teamScores.length; i++ )
 			 message += "\n" + getTeamChatColor(i) + getTeamName(i) + ": " + ChatColor.RESET + teamScores[i] + " points";
 
-		int winningTeam = getHighestValueIndex(teamScores);
+		int winningTeam = Helper.getHighestValueIndex(teamScores);
 		message += "\n\nThe " + getTeamChatColor(winningTeam) + getTeamName(winningTeam) + ChatColor.RESET + " wins!";
 		
 		return message;
@@ -571,17 +573,17 @@ public class FarmKiller extends GameMode
 		// put this player onto one of the teams with the fewest survivors
 		int[] teamCounts = new int[numTeams];
 		for ( int i=0; i<numTeams; i++ )
-			teamCounts[i] = getOnlinePlayers(i, true).size();
-		
+			teamCounts[i] = getOnlinePlayers(new PlayerFilter().team(i)).size();
+				
 		int team = allocatePlayer(player, teamCounts);		
 		broadcastMessage(player, player.getName() + " has joined the " + getTeamChatColor(team) + getTeamName(team));
 	}
 
 	private int allocatePlayer(Player player, int[] teamCounts)
 	{
-		int team = getLowestValueIndex(teamCounts);
+		int team = Helper.getLowestValueIndex(teamCounts);
 		
-		setTeam(player, team);
+		Helper.setTeam(player, team);
 		teamCounts[team] ++;
 		player.sendMessage("You are on the " + getTeamChatColor(team) + getTeamName(team) + "\n" + ChatColor.RESET + "Use the /team command to send messages to your team only");
 		
@@ -597,13 +599,13 @@ public class FarmKiller extends GameMode
 		
 		// give them team-dyed armor, and a sword
 		ItemStack armor = new ItemStack(Material.LEATHER_CHESTPLATE);
-		inv.setChestplate(setColor(armor, color));
+		inv.setChestplate(Helper.setArmorColor(armor, color));
 		
 		armor = new ItemStack(Material.LEATHER_CHESTPLATE);
-		inv.setLeggings(setColor(armor, color));
+		inv.setLeggings(Helper.setArmorColor(armor, color));
 		
 		armor = new ItemStack(Material.LEATHER_BOOTS);
-		inv.setBoots(setColor(armor, color));
+		inv.setBoots(Helper.setArmorColor(armor, color));
 		
 		inv.addItem(new ItemStack(Material.IRON_SWORD));
 	}
@@ -621,7 +623,7 @@ public class FarmKiller extends GameMode
 		final Player player = event.getPlayer();
 		getScheduler().scheduleSyncDelayedTask(getPlugin(), new Runnable() {
 			public void run() {
-				equipPlayer(player, getTeam(player));
+				equipPlayer(player, Helper.getTeam(player));
 			}
 		});
 	}
@@ -663,7 +665,7 @@ public class FarmKiller extends GameMode
 		if ( !isScoringItemType(stack.getType()) )
 			return;
 		
-		int team = getTeam(event.getPlayer());
+		int team = Helper.getTeam(event.getPlayer());
 		long dropScore = 0;
 		
 		for ( int i=0; i<stack.getAmount(); i++ )
@@ -752,11 +754,11 @@ public class FarmKiller extends GameMode
 		if ( victim == null )
 			return;
 		
-		Player attacker = getAttacker(event);
+		Player attacker = Helper.getAttacker(event);
 		if ( attacker == null )
 			return;
 		
-		if ( getTeam(victim) == getTeam(attacker) )
+		if ( Helper.getTeam(victim) == Helper.getTeam(attacker) )
 			event.setCancelled(true);
 	}
 
