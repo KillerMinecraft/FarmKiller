@@ -10,10 +10,9 @@ import com.ftwinston.Killer.Helper;
 import com.ftwinston.Killer.Option;
 import com.ftwinston.Killer.PlayerFilter;
 
-import net.minecraft.server.ChunkCoordinates;
-
 import org.bukkit.ChatColor;
 import org.bukkit.Chunk;
+import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
@@ -29,10 +28,8 @@ import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.generator.BlockPopulator;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.Material;
-
-import org.bukkit.craftbukkit.CraftChunk;
-import org.bukkit.craftbukkit.CraftWorld;
 
 public class FarmKiller extends GameMode
 {
@@ -131,9 +128,7 @@ public class FarmKiller extends GameMode
 		{
 			if ( dropOffCenter == null )
 			{
-				ChunkCoordinates dropOff = ((CraftWorld)w).getHandle().getSpawn();
-				cDropOffX = dropOff.x >> 4; cDropOffZ = dropOff.z >> 4;
-				
+				cDropOffX = w.getSpawnLocation().getBlockX() >> 4; cDropOffZ = w.getSpawnLocation().getBlockZ() >> 4;
 				dropOffCenter = new Location(w, cDropOffX * 16 + 7, w.getSeaLevel() + 10, cDropOffZ * 16 + 7);
 				
 				cMinX = cDropOffX - 4; cMaxX = cDropOffX + 4;
@@ -265,12 +260,11 @@ public class FarmKiller extends GameMode
 						fillInAboveBelow(c, x, y, z);
 					}
 				}
-				
 		}
 		
 		public int getHighestBlockYAt(Chunk c, int x, int z)
 		{
-			return ((CraftChunk)c).getHandle().b(x & 15, z & 15);
+			return c.getWorld().getHighestBlockYAt(c.getX() * 16 + x, c.getZ() * 16 + z);
 		}
 		
 		private int getHighestGroundYAt(Chunk c, int x, int z)
@@ -595,17 +589,24 @@ public class FarmKiller extends GameMode
 	private void equipPlayer(Player player, int team)
 	{
 		PlayerInventory inv = player.getInventory();
-		int color = getTeamItemColor(team);
+		Color color = getTeamArmorColor(team);
 		
 		// give them team-dyed armor, and a sword
 		ItemStack armor = new ItemStack(Material.LEATHER_CHESTPLATE);
-		inv.setChestplate(Helper.setArmorColor(armor, color));
+		
+		LeatherArmorMeta meta = ((LeatherArmorMeta)armor.getItemMeta());
+		meta.setColor(color);
+		
+		armor.setItemMeta(meta);
+		inv.setChestplate(armor);
 		
 		armor = new ItemStack(Material.LEATHER_CHESTPLATE);
-		inv.setLeggings(Helper.setArmorColor(armor, color));
+		armor.setItemMeta(meta);
+		inv.setLeggings(armor);
 		
 		armor = new ItemStack(Material.LEATHER_BOOTS);
-		inv.setBoots(Helper.setArmorColor(armor, color));
+		armor.setItemMeta(meta);
+		inv.setBoots(armor);
 		
 		inv.addItem(new ItemStack(Material.IRON_SWORD));
 	}
