@@ -570,7 +570,7 @@ public class FarmKiller extends GameMode
 			teamCounts[i] = getOnlinePlayers(new PlayerFilter().team(i)).size();
 				
 		int team = allocatePlayer(player, teamCounts);		
-		broadcastMessage(player, player.getName() + " has joined the " + getTeamChatColor(team) + getTeamName(team));
+		broadcastMessage(new PlayerFilter().exclude(player), player.getName() + " has joined the " + getTeamChatColor(team) + getTeamName(team));
 	}
 
 	private int allocatePlayer(Player player, int[] teamCounts)
