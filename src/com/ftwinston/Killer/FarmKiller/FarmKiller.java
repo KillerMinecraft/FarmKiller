@@ -9,6 +9,7 @@ import com.ftwinston.Killer.GameMode;
 import com.ftwinston.Killer.Helper;
 import com.ftwinston.Killer.Option;
 import com.ftwinston.Killer.PlayerFilter;
+import com.ftwinston.Killer.WorldConfig;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Chunk;
@@ -109,12 +110,12 @@ public class FarmKiller extends GameMode
 	private Location dropOffCenter = null;
 	
 	@Override
-	public BlockPopulator[] getExtraBlockPopulators(int worldNumber)
+	public void beforeWorldGeneration(int worldNumber, WorldConfig world)
 	{
 		if ( worldNumber != 0 )
-			return null;
+			return;
 		
-		return new BlockPopulator[] { new PlateauGenerator() };
+		world.getExtraPopulators().add(new PlateauGenerator());
 	}
 	
 	boolean generating = true;
@@ -376,7 +377,7 @@ public class FarmKiller extends GameMode
     }
 	
 	@Override
-	public boolean isLocationProtected(Location l)
+	public boolean isLocationProtected(Location l, Player p)
 	{
 		int cy = dropOffCenter.getBlockY(), ly = l.getBlockY();
 		if ( l.getBlockY() < cy - 1 || ly > cy + 5 )
@@ -439,7 +440,7 @@ public class FarmKiller extends GameMode
 	@Override
 	public Location getSpawnLocation(Player player)
 	{
-		return getSpawnLocationForTeam(Helper.getTeam(player));
+		return getSpawnLocationForTeam(Helper.getTeam(getGame(), player));
 	}
 
 	@Override
@@ -553,7 +554,7 @@ public class FarmKiller extends GameMode
 	{
 		int team = Helper.getLowestValueIndex(teamCounts);
 		
-		Helper.setTeam(player, team);
+		Helper.setTeam(getGame(), player, team);
 		teamCounts[team] ++;
 		player.sendMessage("You are on the " + getTeamChatColor(team) + getTeamName(team) + "\n" + ChatColor.RESET + "Use the /team command to send messages to your team only");
 		
@@ -600,7 +601,7 @@ public class FarmKiller extends GameMode
 		final Player player = event.getPlayer();
 		getScheduler().scheduleSyncDelayedTask(getPlugin(), new Runnable() {
 			public void run() {
-				equipPlayer(player, Helper.getTeam(player));
+				equipPlayer(player, Helper.getTeam(getGame(), player));
 			}
 		});
 	}
@@ -642,7 +643,7 @@ public class FarmKiller extends GameMode
 		if ( !isScoringItemType(stack.getType()) )
 			return;
 		
-		int team = Helper.getTeam(event.getPlayer());
+		int team = Helper.getTeam(getGame(), event.getPlayer());
 		long dropScore = 0;
 		
 		for ( int i=0; i<stack.getAmount(); i++ )
@@ -735,7 +736,7 @@ public class FarmKiller extends GameMode
 		if ( attacker == null )
 			return;
 		
-		if ( Helper.getTeam(victim) == Helper.getTeam(attacker) )
+		if ( Helper.getTeam(getGame(), victim) == Helper.getTeam(getGame(), attacker) )
 			event.setCancelled(true);
 	}
 
