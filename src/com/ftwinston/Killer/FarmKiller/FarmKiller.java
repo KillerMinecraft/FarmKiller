@@ -115,6 +115,9 @@ public class FarmKiller extends GameMode
 		if ( worldNumber != 0 )
 			return;
 		
+		generating = true;
+		dropOffCenter = null;
+		
 		world.getExtraPopulators().add(new PlateauGenerator());
 	}
 	
@@ -369,7 +372,8 @@ public class FarmKiller extends GameMode
 			return;
 		
 		Location loc = event.getLocation();
-		if ( loc.getX() > dropOffCenter.getX() - 80 && loc.getX() < dropOffCenter.getX() + 80
+		if ( dropOffCenter != null
+		  && loc.getX() > dropOffCenter.getX() - 80 && loc.getX() < dropOffCenter.getX() + 80
 		  && loc.getZ() > dropOffCenter.getZ() - 80 && loc.getZ() < dropOffCenter.getZ() + 80 )
 		{
     		event.setCancelled(true);
@@ -379,6 +383,9 @@ public class FarmKiller extends GameMode
 	@Override
 	public boolean isLocationProtected(Location l, Player p)
 	{
+		if ( dropOffCenter == null )
+			return false;
+		
 		int cy = dropOffCenter.getBlockY(), ly = l.getBlockY();
 		if ( l.getBlockY() < cy - 1 || ly > cy + 5 )
 			return false;
@@ -441,16 +448,6 @@ public class FarmKiller extends GameMode
 	public Location getSpawnLocation(Player player)
 	{
 		return getSpawnLocationForTeam(Helper.getTeam(getGame(), player));
-	}
-
-	@Override
-	public void initializeGame(boolean isNewWorlds)
-	{
-		if ( isNewWorlds )
-		{
-			generating = true;
-			dropOffCenter = null;
-		}
 	}
 	
 	@Override
