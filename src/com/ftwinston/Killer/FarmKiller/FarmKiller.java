@@ -174,6 +174,8 @@ public class FarmKiller extends GameMode
 			}
 		}
 		
+		private Material[] groundMats = { Material.GRASS, Material.DIRT, Material.STONE, Material.SAND, Material.GRAVEL, Material.BEDROCK };
+		
 		public void createFlatSurface(Chunk c)
 		{
 			int plateauY = dropOffCenter.getBlockY() - 1;
@@ -193,7 +195,7 @@ public class FarmKiller extends GameMode
 						for ( int z=0; z<16; z++ )
 						{
 							float fraction = Math.max(((float)15-x)/16, ((float)15-z)/16);	
-							int y = (int)(0.5f + Helper.getHighestGroundYAt(c, x, z) * fraction + (plateauY) * (1f - fraction));
+							int y = (int)(0.5f + Helper.getHighestYAt(c, x, z, c.getWorld().getSeaLevel(), groundMats) * fraction + (plateauY) * (1f - fraction));
 							fillInAboveBelow(c, x, y, z);
 						}
 				else if ( cz == cMaxZ )
@@ -201,7 +203,7 @@ public class FarmKiller extends GameMode
 						for ( int z=0; z<16; z++ )
 						{
 							float fraction = Math.max(((float)15-x)/16, ((float)z)/16);	
-							int y = (int)(0.5f + Helper.getHighestGroundYAt(c, x, z) * fraction + (plateauY) * (1f - fraction));
+							int y = (int)(0.5f + Helper.getHighestYAt(c, x, z, c.getWorld().getSeaLevel(), groundMats) * fraction + (plateauY) * (1f - fraction));
 							fillInAboveBelow(c, x, y, z);
 						}
 				else
@@ -210,7 +212,7 @@ public class FarmKiller extends GameMode
 						float fraction = ((float)15-x)/16;
 						for ( int z=0; z<16; z++ )
 						{
-							int y = (int)(0.5f + Helper.getHighestGroundYAt(c, x, z) * fraction + (plateauY) * (1f - fraction));
+							int y = (int)(0.5f + Helper.getHighestYAt(c, x, z, c.getWorld().getSeaLevel(), groundMats) * fraction + (plateauY) * (1f - fraction));
 							fillInAboveBelow(c, x, y, z);
 						}
 					}
@@ -222,7 +224,7 @@ public class FarmKiller extends GameMode
 						for ( int z=0; z<16; z++ )
 						{
 							float fraction = Math.max(((float)x)/16, ((float)15-z)/16);	
-							int y = (int)(0.5f + Helper.getHighestGroundYAt(c, x, z) * fraction + (plateauY) * (1f - fraction));
+							int y = (int)(0.5f + Helper.getHighestYAt(c, x, z, c.getWorld().getSeaLevel(), groundMats) * fraction + (plateauY) * (1f - fraction));
 							fillInAboveBelow(c, x, y, z);
 						}
 				else if ( cz == cMaxZ )
@@ -230,7 +232,7 @@ public class FarmKiller extends GameMode
 						for ( int z=0; z<16; z++ )
 						{
 							float fraction = Math.max(((float)x)/16, ((float)z)/16);	
-							int y = (int)(0.5f + Helper.getHighestGroundYAt(c, x, z) * fraction + (plateauY) * (1f - fraction));
+							int y = (int)(0.5f + Helper.getHighestYAt(c, x, z, c.getWorld().getSeaLevel(), groundMats) * fraction + (plateauY) * (1f - fraction));
 							fillInAboveBelow(c, x, y, z);
 						}
 				else
@@ -239,7 +241,7 @@ public class FarmKiller extends GameMode
 						float fraction = ((float)x)/16;
 						for ( int z=0; z<16; z++ )
 						{
-							int y = (int)(0.5f + Helper.getHighestGroundYAt(c, x, z) * fraction + (plateauY) * (1f - fraction));
+							int y = (int)(0.5f + Helper.getHighestYAt(c, x, z, c.getWorld().getSeaLevel(), groundMats) * fraction + (plateauY) * (1f - fraction));
 							fillInAboveBelow(c, x, y, z);
 						}
 					}
@@ -250,7 +252,7 @@ public class FarmKiller extends GameMode
 					float fraction = ((float)15-z)/16;
 					for ( int x=0; x<16; x++ )
 					{
-						int y = (int)(0.5f + Helper.getHighestGroundYAt(c, x, z) * fraction + (plateauY) * (1f - fraction));
+						int y = (int)(0.5f + Helper.getHighestYAt(c, x, z, c.getWorld().getSeaLevel(), groundMats) * fraction + (plateauY) * (1f - fraction));
 						fillInAboveBelow(c, x, y, z);
 					}
 				}
@@ -260,7 +262,7 @@ public class FarmKiller extends GameMode
 					float fraction = ((float)z)/16;
 					for ( int x=0; x<16; x++ )
 					{
-						int y = (int)(0.5f + Helper.getHighestGroundYAt(c, x, z) * fraction + (plateauY) * (1f - fraction));
+						int y = (int)(0.5f + Helper.getHighestYAt(c, x, z, c.getWorld().getSeaLevel(), groundMats) * fraction + (plateauY) * (1f - fraction));
 						fillInAboveBelow(c, x, y, z);
 					}
 				}
