@@ -20,6 +20,7 @@ import org.bukkit.World;
 import org.bukkit.World.Environment;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.ItemSpawnEvent;
@@ -367,7 +368,7 @@ public class FarmKiller extends GameMode
 		}
 	}
 	
-	@EventHandler
+	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onItemSpawn(ItemSpawnEvent event)
     {
 		if ( shouldIgnoreEvent(event.getLocation()) || !generating )
@@ -594,7 +595,7 @@ public class FarmKiller extends GameMode
 			&& type != Material.LEATHER_BOOTS;
 	}
 	
-	@EventHandler
+	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onPlayerRespawn(PlayerRespawnEvent event)
 	{
 		final Player player = event.getPlayer();
@@ -605,7 +606,7 @@ public class FarmKiller extends GameMode
 		});
 	}
 	
-	@EventHandler
+	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onPlayerKilled(PlayerDeathEvent event)
 	{
 		// players don't drop leather armor or iron swords on death
@@ -624,7 +625,7 @@ public class FarmKiller extends GameMode
 		return null;
 	}
 	
-	@EventHandler(ignoreCancelled = true)
+	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onItemDrop(PlayerDropItemEvent event)
     {
 		if ( shouldIgnoreEvent(event.getPlayer()) )
@@ -718,7 +719,7 @@ public class FarmKiller extends GameMode
 		}
 	}
 	
-	@EventHandler(ignoreCancelled = true)
+	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void entityDamaged(EntityDamageEvent event)
 	{
 		if ( shouldIgnoreEvent(event.getEntity()) )
