@@ -1,15 +1,19 @@
-package com.ftwinston.Killer.FarmKiller;
+package com.ftwinston.KillerMinecraft.Modules.FarmKiller;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import com.ftwinston.Killer.GameMode;
-import com.ftwinston.Killer.Helper;
-import com.ftwinston.Killer.Option;
-import com.ftwinston.Killer.PlayerFilter;
-import com.ftwinston.Killer.WorldConfig;
+import com.ftwinston.KillerMinecraft.GameMode;
+import com.ftwinston.KillerMinecraft.Helper;
+import com.ftwinston.KillerMinecraft.Option;
+import com.ftwinston.KillerMinecraft.PlayerFilter;
+import com.ftwinston.KillerMinecraft.WorldConfig;
+import com.ftwinston.KillerMinecraft.Configuration.NumericOption;
+import com.ftwinston.KillerMinecraft.Configuration.TeamInfo;
+import com.ftwinston.KillerMinecraft.Configuration.ToggleOption;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Chunk;
@@ -35,43 +39,106 @@ import org.bukkit.Material;
 
 public class FarmKiller extends GameMode
 {
-	public static final int friendlyFire = 0, diminishingReturns = 1, optionTwoTeams = 2, optionThreeTeams = 3, optionFourTeams = 4, optionAnnounceScores = 5, optionTwoDays = 6, optionFourDays = 7, optionSixDays = 8, optionEightDays = 9;
-
-	private int[] teamScores;
-	private int dayCountProcessID, dayCount = 0, dayLimit = 4;
-	private int numTeams = 2;
+	ToggleOption friendlyFire, diminishingReturns, announceScores;
+	NumericOption numTeams, dayLimit;
+	
+	private int dayCountProcessID, dayCount = 0;
+	
+	private abstract class FarmTeamInfo extends TeamInfo
+	{
+		private long score = 0;
+		public long getScore() { return score; }
+		public void addScore(long add) { score += add; }
+	}
+	
+	FarmTeamInfo[] teams = new FarmTeamInfo[0];
+	@Override
+	public TeamInfo[] getTeams()
+	{
+		if ( teams.length != numTeams.getValue())
+		{
+			FarmTeamInfo[] newTeams = new FarmTeamInfo[numTeams.getValue()];
+			int i;
+			for ( i=0; i<teams.length && i<newTeams.length; i++ )
+				newTeams[i] = teams[i];
+			for ( ; i<newTeams.length; i++ )
+				switch ( i )
+				{
+					case 0:
+						newTeams[i] = new FarmTeamInfo() {
+							@Override
+							public String getName() { return "red team"; }
+							@Override
+							public ChatColor getChatColor() { return ChatColor.RED; }
+							@Override
+							public byte getWoolColor() { return (byte)0xE; }
+							@Override
+							public Color getArmorColor() { return Color.RED; }
+						}; break;
+					case 1:
+						newTeams[i] = new FarmTeamInfo() {
+							@Override
+							public String getName() { return "blue team"; }
+							@Override
+							public ChatColor getChatColor() { return ChatColor.BLUE; }
+							@Override
+							public byte getWoolColor() { return (byte)0xB; }
+							@Override
+							public Color getArmorColor() { return Color.fromRGB(0x0066FF); }
+						}; break;
+					case 2:
+						newTeams[i] = new FarmTeamInfo() {
+							@Override
+							public String getName() { return "yellow team"; }
+							@Override
+							public ChatColor getChatColor() { return ChatColor.YELLOW; }
+							@Override
+							public byte getWoolColor() { return (byte)0x4; }
+							@Override
+							public Color getArmorColor() { return Color.YELLOW; }
+						}; break;
+					default:
+						newTeams[i] = new FarmTeamInfo() {
+							@Override
+							public String getName() { return "green team"; }
+							@Override
+							public ChatColor getChatColor() { return ChatColor.GREEN; }
+							@Override
+							public byte getWoolColor() { return (byte)0x5; }
+							@Override
+							public Color getArmorColor() { return Color.GREEN; }
+						}; break;
+				}
+			teams = newTeams;
+		}
+		return teams;
+	}
 	
 	@Override
-	public int getMinPlayers() { return numTeams; } // one player on each team is our minimum
+	public int getMinPlayers() { return numTeams.getValue(); } // one player on each team is our minimum
 	
 	@Override
 	public Option[] setupOptions()
 	{
-		Option[] options = {
-			new Option("Players can hurt teammates", true),
-			new Option("Diminishing returns on each item type", true),
-			new Option("Two teams", true),
-			new Option("Three teams", false),
-			new Option("Four teams", false),
-			new Option("Announce scores at the start of each day", true),
-			new Option("Game lasts for two days", false),
-			new Option("Game lasts for four days", true),
-			new Option("Game lasts for six days", false),
-			new Option("Game lasts for eight days", false)
-		};
+		friendlyFire = new ToggleOption("Players can hurt teammates", true);
+		diminishingReturns = new ToggleOption("Diminishing returns on each item type", true);
+		announceScores = new ToggleOption("Announce scores at the start of each day", true);
 		
-		return options;
+		numTeams = new NumericOption("Number of teams", 2, 4, Material.CHEST, 2);
+		dayLimit = new NumericOption("Duration of game, in days", 2, 8, Material.WATCH, 4);			
+		
+		return new Option[] { friendlyFire, diminishingReturns, numTeams, announceScores, dayLimit };
 	}
 	
 	@Override
-	public String getHelpMessage(int num, int team)
+	public String getHelpMessage(int num, TeamInfo team)
 	{
 		switch ( num )
 		{
 			case 0:
 			{
 				String numText;
-				switch ( numTeams )
+				switch ( numTeams.getValue() )
 				{
 					case 2:
 						numText = "two "; break;
@@ -80,7 +147,7 @@ public class FarmKiller extends GameMode
 					case 4:
 						numText = "four "; break;
 					default:
-						numText = Integer.toString(numTeams); break;
+						numText = Integer.toString(numTeams.getValue()); break;
 				}
 				return "Players have been split into " + numText + "teams. Get farming!\nThe scoreboard shows what team each player is on.";
 			}
@@ -94,7 +161,7 @@ public class FarmKiller extends GameMode
 				return "You will respawn at your base when you die.";
 				
 			case 4:
-				if ( getOption(optionAnnounceScores).isEnabled() )
+				if ( announceScores.isEnabled() )
 					return "The current scores will be announced at the start of each day.";
 					
 			default:
@@ -155,9 +222,11 @@ public class FarmKiller extends GameMode
 				createDropOffPoint(c);
 			
 			// generate spawn points for each team
-			for ( int team=0; team<numTeams; team++ )
+			TeamInfo[] teams = getTeams();
+			for ( int teamNum=0; teamNum<numTeams.getValue(); teamNum++ )
 			{
-				Location spawn = getSpawnLocationForTeam(team);
+				TeamInfo team = teams[teamNum];
+				Location spawn = getSpawnLocationForTeam(teamNum);
 				if ( spawn.getChunk() == c )
 				{
 					int spawnX = spawn.getBlockX() & 15, spawnY = spawn.getBlockY() - 1, spawnZ = spawn.getBlockZ() & 15;
@@ -168,7 +237,7 @@ public class FarmKiller extends GameMode
 							Block b = c.getBlock(x, spawnY, z);
 							
 							b.setType(Material.WOOL);
-							b.setData(getTeamWoolColor(team));
+							b.setData(team.getWoolColor());
 						}
 					c.getBlock(spawnX, spawnY, spawnZ).setType(Material.BEDROCK);
 				}
@@ -371,9 +440,6 @@ public class FarmKiller extends GameMode
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onItemSpawn(ItemSpawnEvent event)
     {
-		if ( shouldIgnoreEvent(event.getLocation()) || !generating )
-			return;
-		
 		Location loc = event.getLocation();
 		if ( dropOffCenter != null
 		  && loc.getX() > dropOffCenter.getX() - 80 && loc.getX() < dropOffCenter.getX() + 80
@@ -400,7 +466,7 @@ public class FarmKiller extends GameMode
 			return true;
 			
 		// the spawn point for each team is also protected 
-		for ( int team=0; team<numTeams; team++ )
+		for ( int team=0; team<numTeams.getValue(); team++ )
 		{
 			Location spawn = getSpawnLocationForTeam(team);
 			if ( lx == spawn.getBlockX() && lz == spawn.getBlockZ() && ly < cy + 2 )
@@ -421,14 +487,14 @@ public class FarmKiller extends GameMode
 		switch ( team )
 		{
 			case 0:
-				if ( numTeams == 3 )
+				if ( numTeams.getValue() == 3 )
 					loc = dropOffCenter.clone().add(-35.5, 0, -20.5); // for 3 teams, ensure they're equidistant from each other, as well as from the plinth
 				else
 					loc = dropOffCenter.clone().add(-43.5, 0, 0.5);
 				loc.setYaw(-90);
 				return loc;
 			case 1:
-				if ( numTeams == 3 )
+				if ( numTeams.getValue() == 3 )
 					loc = dropOffCenter.clone().add(35.5, 0, -20.5); // for 3 teams, ensure they're equidistant from each other, as well as from the plinth
 				else
 					loc = dropOffCenter.clone().add(43.5, 0, 0);
@@ -450,11 +516,11 @@ public class FarmKiller extends GameMode
 	@Override
 	public Location getSpawnLocation(Player player)
 	{
-		return getSpawnLocationForTeam(Helper.getTeam(getGame(), player));
+		return getSpawnLocationForTeam(indexOfTeam(Helper.getTeam(getGame(), player)));
 	}
 	
 	@Override
-	public void gameStarted(boolean isNewWorlds)
+	public void gameStarted()
 	{
 		// don't let drops spawn on the plateau for a couple of seconds
 		getScheduler().runTaskLater(getPlugin(), new Runnable() {
@@ -462,13 +528,10 @@ public class FarmKiller extends GameMode
 				generating = false;
 			}
 		}, 60);
-				
-		teamScores = new int[numTeams];
-		for ( int i=0; i<numTeams; i++ )
-			teamScores[i] = 0;
+
 		scoresForTypes.clear();
-			
-		int[] teamCounts = new int[numTeams];
+		
+		int[] teamCounts = new int[numTeams.getValue()];
 		List<Player> players = getOnlinePlayers();
 		
 		while ( players.size() > 0 )
@@ -487,7 +550,7 @@ public class FarmKiller extends GameMode
 				if ( time < lastRun ) // time of day has gone backwards: must be a new day! Allocate the killers
 				{
 					dayCount ++;
-					if ( dayCount >= dayLimit )
+					if ( dayCount >= dayLimit.getValue() )
 					{
 						endGame();
 						getScheduler().cancelTask(dayCountProcessID);
@@ -495,7 +558,7 @@ public class FarmKiller extends GameMode
 					else
 					{
 						String message = ChatColor.YELLOW + "Day " + (dayCount+1) + " of " + dayLimit;
-						if ( getOption(optionAnnounceScores).isEnabled() )
+						if ( announceScores.isEnabled() )
 							message += writeCurrentScores();
 						broadcastMessage(message);
 					}
@@ -515,14 +578,44 @@ public class FarmKiller extends GameMode
 	
 	private String writeCurrentScores()
 	{
-		String message = "";
-		for ( int i=0; i<teamScores.length; i++ )
-			 message += "\n" + getTeamChatColor(i) + getTeamName(i) + ": " + ChatColor.RESET + teamScores[i] + " points";
+		StringBuilder message = new StringBuilder();
+		long winningScore = 0;
+		ArrayList<FarmTeamInfo> winningTeams = new ArrayList<FarmTeamInfo>();
+		for ( int i=0; i<teams.length; i++ )
+		{
+			FarmTeamInfo team = teams[i];
+			message.append("\n" + team.getChatColor() + team.getName() + ": " + ChatColor.RESET + team.getScore() + " points");
+			
+			// also count the scores to decide the winning teams
+			if ( team.getScore() > winningScore )
+			{
+				winningScore = team.getScore();
+				winningTeams.clear();
+				winningTeams.add(team);
+			}
+			else if ( team.getScore() == winningScore )
+				winningTeams.add(team);
+		}
 
-		int winningTeam = Helper.getHighestValueIndex(teamScores);
-		message += "\n\nThe " + getTeamChatColor(winningTeam) + getTeamName(winningTeam) + ChatColor.RESET + " wins!";
-		
-		return message;
+		if ( winningTeams.size() == teams.length )
+			message.append("\n\nThe game was drawn, the scores are equal");
+		else
+		{
+			message.append("\n\nThe ");
+			for ( int i=0; i<winningTeams.size(); i++ )
+			{
+				if ( i==winningTeams.size()-1 )
+					message.append(" and ");
+				else if ( i > 0 )
+					message.append(", ");
+				
+				FarmTeamInfo team = teams[i];
+				message.append(team.getChatColor() + team.getName() + ChatColor.RESET);
+			}
+			
+			message.append(winningTeams.size() == 0 ? " wins!" : " win!");
+		}
+		return message.toString();
 	}
 	
 	@Override
@@ -536,37 +629,39 @@ public class FarmKiller extends GameMode
 	}
 	
 	@Override
-	public void playerJoinedLate(Player player, boolean isNewPlayer)
+	public void playerJoined(Player player, boolean isNewPlayer)
 	{
 		if ( !isNewPlayer )
 			return;
 		
 		// put this player onto one of the teams with the fewest survivors
-		int[] teamCounts = new int[numTeams];
-		for ( int i=0; i<numTeams; i++ )
-			teamCounts[i] = getOnlinePlayers(new PlayerFilter().team(i)).size();
+		TeamInfo[] teams = getTeams();
+		int[] teamCounts = new int[numTeams.getValue()];
+		for ( int i=0; i<teamCounts.length; i++ )
+			teamCounts[i] = getOnlinePlayers(new PlayerFilter().team(teams[i])).size();
 				
-		int team = allocatePlayer(player, teamCounts);		
-		broadcastMessage(new PlayerFilter().exclude(player), player.getName() + " has joined the " + getTeamChatColor(team) + getTeamName(team));
+		TeamInfo team = allocatePlayer(player, teamCounts);
+		broadcastMessage(new PlayerFilter().exclude(player), player.getName() + " has joined the " + team.getChatColor() + team.getName());
 	}
 
-	private int allocatePlayer(Player player, int[] teamCounts)
+	private TeamInfo allocatePlayer(Player player, int[] teamCounts)
 	{
-		int team = Helper.getLowestValueIndex(teamCounts);
+		int teamNum = Helper.getLowestValueIndex(teamCounts);
+		TeamInfo team = getTeams()[teamNum];
 		
 		Helper.setTeam(getGame(), player, team);
-		teamCounts[team] ++;
-		player.sendMessage("You are on the " + getTeamChatColor(team) + getTeamName(team) + "\n" + ChatColor.RESET + "Use the /team command to send messages to your team only");
+		teamCounts[teamNum] ++;
+		player.sendMessage("You are on the " + team.getChatColor() + team.getName() + "\n" + ChatColor.RESET + "Use the /team command to send messages to your team only");
 		
 		equipPlayer(player, team);
 
 		return team;
 	}
 	
-	private void equipPlayer(Player player, int team)
+	private void equipPlayer(Player player, TeamInfo team)
 	{
 		PlayerInventory inv = player.getInventory();
-		Color color = getTeamArmorColor(team);
+		Color color = team.getArmorColor();
 		
 		// give them team-dyed armor, and a sword
 		ItemStack armor = new ItemStack(Material.LEATHER_CHESTPLATE);
@@ -617,7 +712,7 @@ public class FarmKiller extends GameMode
 	}
 	
 	@Override
-	public void playerKilledOrQuit(OfflinePlayer player) { }
+	public void playerQuit(OfflinePlayer player) { }
 	
 	@Override
 	public Location getCompassTarget(Player player)
@@ -628,9 +723,6 @@ public class FarmKiller extends GameMode
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onItemDrop(PlayerDropItemEvent event)
     {
-		if ( shouldIgnoreEvent(event.getPlayer()) )
-			return;
-			
 		if ( !isInDropOffArea(event.getPlayer().getLocation()) )
 			return;
 		
@@ -643,14 +735,15 @@ public class FarmKiller extends GameMode
 		if ( !isScoringItemType(stack.getType()) )
 			return;
 		
-		int team = Helper.getTeam(getGame(), event.getPlayer());
+		FarmTeamInfo team = (FarmTeamInfo)Helper.getTeam(getGame(), event.getPlayer());
+		int teamNum = indexOfTeam(team);
 		long dropScore = 0;
 		
 		for ( int i=0; i<stack.getAmount(); i++ )
-			dropScore += getScoreForItem(stack.getType(), team);
+			dropScore += getScoreForItem(stack.getType(), teamNum);
 		
 		event.getPlayer().sendMessage(stack.getType().name() + ": score +" + dropScore);
-		teamScores[team] += dropScore;
+		team.addScore(dropScore);
 		
 		event.getItemDrop().remove(); // don't actually DROP the item ... should we schedule a brief delay here? 
     }
@@ -703,7 +796,7 @@ public class FarmKiller extends GameMode
 	Map<Material, Long> scoresForTypes = new HashMap<Material, Long>();
 	private long getScoreForItem(Material type, int team)
 	{
-		if ( !getOption(diminishingReturns).isEnabled() )
+		if ( !diminishingReturns.isEnabled() )
 			return startingScoreForType;
 		
 		if ( scoresForTypes.containsKey(type) )
@@ -722,10 +815,7 @@ public class FarmKiller extends GameMode
 	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void entityDamaged(EntityDamageEvent event)
 	{
-		if ( shouldIgnoreEvent(event.getEntity()) )
-			return;
-		
-		if ( getOption(friendlyFire).isEnabled() )
+		if ( friendlyFire.isEnabled() )
 			return;
 		
 		Player victim = (Player)event.getEntity();
@@ -738,29 +828,5 @@ public class FarmKiller extends GameMode
 		
 		if ( Helper.getTeam(getGame(), victim) == Helper.getTeam(getGame(), attacker) )
 			event.setCancelled(true);
-	}
-
-	@Override
-	public void toggleOption(int num)
-	{
-		super.toggleOption(num);
-		
-		Option.ensureOnlyOneEnabled(getOptions(), num, optionTwoTeams, optionThreeTeams, optionFourTeams);
-		if ( num >= optionTwoTeams && num <= optionFourTeams && getOption(num).isEnabled() )
-			numTeams = num; // change the numTeams value ... it's a happy coincidence that optionTwoTeams = 2, optionThreeTeams = 3, optionFourTeams = 4
-
-		Option.ensureOnlyOneEnabled(getOptions(), num, optionTwoDays, optionFourDays, optionSixDays, optionEightDays);
-		if ( num >= optionTwoDays && num <= optionSixDays && getOption(num).isEnabled() )
-			switch ( num )
-			{
-				case optionTwoDays:
-					dayLimit = 2; break;
-				case optionFourDays:
-					dayLimit = 4; break;
-				case optionSixDays:
-					dayLimit = 6; break;
-				case optionEightDays:
-					dayLimit = 8; break;
-			}
 	}
 }
