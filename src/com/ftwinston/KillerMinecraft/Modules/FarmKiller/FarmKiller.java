@@ -53,66 +53,7 @@ public class FarmKiller extends GameMode
 	
 	FarmTeamInfo[] teams = new FarmTeamInfo[0];
 	@Override
-	public TeamInfo[] getTeams()
-	{
-		if ( teams.length != numTeams.getValue())
-		{
-			FarmTeamInfo[] newTeams = new FarmTeamInfo[numTeams.getValue()];
-			int i;
-			for ( i=0; i<teams.length && i<newTeams.length; i++ )
-				newTeams[i] = teams[i];
-			for ( ; i<newTeams.length; i++ )
-				switch ( i )
-				{
-					case 0:
-						newTeams[i] = new FarmTeamInfo() {
-							@Override
-							public String getName() { return "red team"; }
-							@Override
-							public ChatColor getChatColor() { return ChatColor.RED; }
-							@Override
-							public byte getWoolColor() { return (byte)0xE; }
-							@Override
-							public Color getArmorColor() { return Color.RED; }
-						}; break;
-					case 1:
-						newTeams[i] = new FarmTeamInfo() {
-							@Override
-							public String getName() { return "blue team"; }
-							@Override
-							public ChatColor getChatColor() { return ChatColor.BLUE; }
-							@Override
-							public byte getWoolColor() { return (byte)0xB; }
-							@Override
-							public Color getArmorColor() { return Color.fromRGB(0x0066FF); }
-						}; break;
-					case 2:
-						newTeams[i] = new FarmTeamInfo() {
-							@Override
-							public String getName() { return "yellow team"; }
-							@Override
-							public ChatColor getChatColor() { return ChatColor.YELLOW; }
-							@Override
-							public byte getWoolColor() { return (byte)0x4; }
-							@Override
-							public Color getArmorColor() { return Color.YELLOW; }
-						}; break;
-					default:
-						newTeams[i] = new FarmTeamInfo() {
-							@Override
-							public String getName() { return "green team"; }
-							@Override
-							public ChatColor getChatColor() { return ChatColor.GREEN; }
-							@Override
-							public byte getWoolColor() { return (byte)0x5; }
-							@Override
-							public Color getArmorColor() { return Color.GREEN; }
-						}; break;
-				}
-			teams = newTeams;
-		}
-		return teams;
-	}
+	public TeamInfo[] getTeams() { return teams; }
 	
 	@Override
 	public int getMinPlayers() { return numTeams.getValue(); } // one player on each team is our minimum
@@ -124,7 +65,65 @@ public class FarmKiller extends GameMode
 		diminishingReturns = new ToggleOption("Diminishing returns on each item type", true);
 		announceScores = new ToggleOption("Announce scores at the start of each day", true);
 		
-		numTeams = new NumericOption("Number of teams", 2, 4, Material.CHEST, 2);
+		numTeams = new NumericOption("Number of teams", 2, 4, Material.CHEST, 2) {
+			@Override
+			protected void changed() 
+			{
+				FarmTeamInfo[] newTeams = new FarmTeamInfo[numTeams.getValue()];
+				int i;
+				for ( i=0; i<teams.length && i<newTeams.length; i++ )
+					newTeams[i] = teams[i];
+				for ( ; i<newTeams.length; i++ )
+					switch ( i )
+					{
+						case 0:
+							newTeams[i] = new FarmTeamInfo() {
+								@Override
+								public String getName() { return "red team"; }
+								@Override
+								public ChatColor getChatColor() { return ChatColor.RED; }
+								@Override
+								public byte getWoolColor() { return (byte)0xE; }
+								@Override
+								public Color getArmorColor() { return Color.RED; }
+							}; break;
+						case 1:
+							newTeams[i] = new FarmTeamInfo() {
+								@Override
+								public String getName() { return "blue team"; }
+								@Override
+								public ChatColor getChatColor() { return ChatColor.BLUE; }
+								@Override
+								public byte getWoolColor() { return (byte)0xB; }
+								@Override
+								public Color getArmorColor() { return Color.fromRGB(0x0066FF); }
+							}; break;
+						case 2:
+							newTeams[i] = new FarmTeamInfo() {
+								@Override
+								public String getName() { return "yellow team"; }
+								@Override
+								public ChatColor getChatColor() { return ChatColor.YELLOW; }
+								@Override
+								public byte getWoolColor() { return (byte)0x4; }
+								@Override
+								public Color getArmorColor() { return Color.YELLOW; }
+							}; break;
+						default:
+							newTeams[i] = new FarmTeamInfo() {
+								@Override
+								public String getName() { return "green team"; }
+								@Override
+								public ChatColor getChatColor() { return ChatColor.GREEN; }
+								@Override
+								public byte getWoolColor() { return (byte)0x5; }
+								@Override
+								public Color getArmorColor() { return Color.GREEN; }
+							}; break;
+					}
+				teams = newTeams;
+			}
+		};
 		dayLimit = new NumericOption("Duration of game, in days", 2, 8, Material.WATCH, 4);			
 		
 		return new Option[] { friendlyFire, diminishingReturns, numTeams, announceScores, dayLimit };
@@ -649,7 +648,7 @@ public class FarmKiller extends GameMode
 		int teamNum = Helper.getLowestValueIndex(teamCounts);
 		TeamInfo team = getTeams()[teamNum];
 		
-		Helper.setTeam(getGame(), player, team);
+		setTeam(player, team);
 		teamCounts[teamNum] ++;
 		player.sendMessage("You are on the " + team.getChatColor() + team.getName() + "\n" + ChatColor.RESET + "Use the /team command to send messages to your team only");
 		
