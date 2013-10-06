@@ -52,8 +52,6 @@ public class FarmKiller extends GameMode
 	}
 	
 	FarmTeamInfo[] teams = new FarmTeamInfo[0];
-	@Override
-	public TeamInfo[] getTeams() { return teams; }
 	
 	@Override
 	public int getMinPlayers() { return numTeams.getValue(); } // one player on each team is our minimum
@@ -69,7 +67,7 @@ public class FarmKiller extends GameMode
 			@Override
 			protected void changed() 
 			{
-				FarmTeamInfo[] newTeams = new FarmTeamInfo[numTeams.getValue()];
+				FarmTeamInfo[] newTeams = new FarmTeamInfo[numTeams == null ? 2 : numTeams.getValue()];
 				int i;
 				for ( i=0; i<teams.length && i<newTeams.length; i++ )
 					newTeams[i] = teams[i];
@@ -122,6 +120,7 @@ public class FarmKiller extends GameMode
 							}; break;
 					}
 				teams = newTeams;
+				setTeams(teams);
 			}
 		};
 		dayLimit = new NumericOption("Duration of game, in days", 2, 8, Material.WATCH, 4);			
@@ -167,9 +166,6 @@ public class FarmKiller extends GameMode
 				return null;
 		}
 	}
-	
-	@Override
-	public boolean teamAllocationIsSecret() { return false; }
 	
 	@Override
 	public Environment[] getWorldsToGenerate() { return new Environment[] { Environment.NORMAL }; }
