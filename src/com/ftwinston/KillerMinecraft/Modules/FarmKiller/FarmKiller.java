@@ -511,7 +511,7 @@ public class FarmKiller extends GameMode
 	@Override
 	public Location getSpawnLocation(Player player)
 	{
-		return getSpawnLocationForTeam(indexOfTeam(Helper.getTeam(getGame(), player)));
+		return getSpawnLocationForTeam(indexOfTeam(getTeam(player)));
 	}
 	
 	@Override
@@ -624,7 +624,7 @@ public class FarmKiller extends GameMode
 	}
 	
 	@Override
-	public void playerJoined(Player player, boolean isNewPlayer)
+	public void playerJoinedLate(Player player, boolean isNewPlayer)
 	{
 		if ( !isNewPlayer )
 			return;
@@ -691,7 +691,7 @@ public class FarmKiller extends GameMode
 		final Player player = event.getPlayer();
 		getScheduler().scheduleSyncDelayedTask(getPlugin(), new Runnable() {
 			public void run() {
-				equipPlayer(player, Helper.getTeam(getGame(), player));
+				equipPlayer(player, getTeam(player));
 			}
 		});
 	}
@@ -730,7 +730,7 @@ public class FarmKiller extends GameMode
 		if ( !isScoringItemType(stack.getType()) )
 			return;
 		
-		FarmTeamInfo team = (FarmTeamInfo)Helper.getTeam(getGame(), event.getPlayer());
+		FarmTeamInfo team = (FarmTeamInfo)getTeam(event.getPlayer());
 		int teamNum = indexOfTeam(team);
 		long dropScore = 0;
 		
@@ -821,7 +821,7 @@ public class FarmKiller extends GameMode
 		if ( attacker == null )
 			return;
 		
-		if ( Helper.getTeam(getGame(), victim) == Helper.getTeam(getGame(), attacker) )
+		if ( getTeam(victim) == getTeam(attacker) )
 			event.setCancelled(true);
 	}
 }
