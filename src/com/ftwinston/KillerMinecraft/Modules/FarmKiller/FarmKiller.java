@@ -53,6 +53,14 @@ public class FarmKiller extends GameMode
 	
 	FarmTeamInfo[] teams = new FarmTeamInfo[0];
 	
+	private int indexOfTeam(TeamInfo team)
+	{
+		for (int i=0; i<teams.length; i++)
+			if (team == teams[i])
+				return i;
+		return -1;
+	}
+	
 	@Override
 	public int getMinPlayers() { return numTeams.getValue(); } // one player on each team is our minimum
 	
@@ -470,12 +478,6 @@ public class FarmKiller extends GameMode
 		return false;
 	}
 	
-	@Override
-	public boolean isAllowedToRespawn(Player player) { return true; }
-	
-	@Override
-	public boolean useDiscreetDeathMessages() { return false; }
-
 	private Location getSpawnLocationForTeam(int team)
 	{
 		Location loc;
@@ -624,11 +626,8 @@ public class FarmKiller extends GameMode
 	}
 	
 	@Override
-	public void playerJoinedLate(Player player, boolean isNewPlayer)
+	public void playerJoinedLate(Player player)
 	{
-		if ( !isNewPlayer )
-			return;
-		
 		// put this player onto one of the teams with the fewest survivors
 		TeamInfo[] teams = getTeams();
 		int[] teamCounts = new int[numTeams.getValue()];
