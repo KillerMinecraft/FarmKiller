@@ -198,6 +198,7 @@ public class FarmKiller extends GameMode
 	{
 		int cDropOffX, cDropOffZ, cMinX, cMaxX, cMinZ, cMaxZ;		
 		
+		@SuppressWarnings("deprecation")
 		@Override
 		public void populate(World w, Random r, Chunk c)
 		{
@@ -364,6 +365,7 @@ public class FarmKiller extends GameMode
 				c.getBlock(x,y,z).setType(Material.AIR);
 		}
 		
+		@SuppressWarnings("deprecation")
 		public void createDropOffPoint(Chunk c)
 		{
 			int xmin = dropOffCenter.getBlockX() - 3, xmax = dropOffCenter.getBlockX() + 3;
