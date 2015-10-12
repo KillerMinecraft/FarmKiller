@@ -1,6 +1,6 @@
-name: Farm Killer
+name: Farm_Killer
 main: com.ftwinston.KillerMinecraft.Modules.FarmKiller.Plugin
-depend: [Killer Minecraft]
+depend: [Killer_Minecraft]
 version: 1
 load: STARTUP
 description: A game mode for Killer Minecraft
