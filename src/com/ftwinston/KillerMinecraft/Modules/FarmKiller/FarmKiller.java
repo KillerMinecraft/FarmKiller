@@ -2,6 +2,7 @@ package com.ftwinston.KillerMinecraft.Modules.FarmKiller;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -130,42 +131,31 @@ public class FarmKiller extends GameMode
 	}
 	
 	@Override
-	public String getHelpMessage(int num, TeamInfo team)
+	public List<String> getHelpMessages(TeamInfo team)
 	{
-		switch ( num )
-		{
-			case 0:
-			{
-				String numText;
-				switch ( numTeams.getValue() )
-				{
-					case 2:
-						numText = "two "; break;
-					case 3:
-						numText = "three "; break;
-					case 4:
-						numText = "four "; break;
-					default:
-						numText = Integer.toString(numTeams.getValue()); break;
-				}
-				return "Players have been split into " + numText + "teams. Get farming!\nThe scoreboard shows what team each player is on.";
-			}
-			case 1:
-				return "The teams complete to deliver the most farm produce (plants, meat, eggs, wool and leather - no seeds) to a central depot.";
-			
-			case 2:
-				return "At the end of " + dayLimit + " days, the team that has the highest score wins the game.";
+		LinkedList<String> messages = new LinkedList<String>();
 
+		String numText;
+		switch ( numTeams.getValue() )
+		{
+			case 2:
+				numText = "two "; break;
 			case 3:
-				return "You will respawn at your base when you die.";
-				
+				numText = "three "; break;
 			case 4:
-				if ( announceScores.isEnabled() )
-					return "The current scores will be announced at the start of each day.";
-					
+				numText = "four "; break;
 			default:
-				return null;
+				numText = Integer.toString(numTeams.getValue()); break;
 		}
+		messages.add("Players have been split into " + numText + "teams. Get farming!\nThe scoreboard shows what team each player is on.");
+		messages.add("The teams complete to deliver the most farm produce (plants, meat, eggs, wool and leather - no seeds) to a central depot.");
+		messages.add("At the end of " + dayLimit + " days, the team that has the highest score wins the game.");
+		messages.add("You will respawn at your base when you die.");
+				
+		if ( announceScores.isEnabled() )
+			messages.add("The current scores will be announced at the start of each day.");
+					
+		return messages;
 	}
 	
 	@Override
