@@ -11,7 +11,6 @@ import com.ftwinston.KillerMinecraft.GameMode;
 import com.ftwinston.KillerMinecraft.Helper;
 import com.ftwinston.KillerMinecraft.Option;
 import com.ftwinston.KillerMinecraft.PlayerFilter;
-import com.ftwinston.KillerMinecraft.WorldConfig;
 import com.ftwinston.KillerMinecraft.Configuration.NumericOption;
 import com.ftwinston.KillerMinecraft.Configuration.TeamInfo;
 import com.ftwinston.KillerMinecraft.Configuration.ToggleOption;
@@ -33,6 +32,7 @@ import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.world.WorldInitEvent;
 import org.bukkit.generator.BlockPopulator;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -161,21 +161,16 @@ public class FarmKiller extends GameMode
 	@Override
 	public Environment[] getWorldsToGenerate() { return new Environment[] { Environment.NORMAL }; }
 	
-	private Location dropOffCenter = null;
+	private Location dropOffCenter = null;	
+	boolean generating = true;
 	
-	@Override
-	public void beforeWorldGeneration(int worldNumber, WorldConfig world)
+	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+	public void onWorldInit(WorldInitEvent event)
 	{
-		if ( worldNumber != 0 )
-			return;
-		
 		generating = true;
 		dropOffCenter = null;
-		
-		world.getExtraPopulators().add(new PlateauGenerator());
+		event.getWorld().getPopulators().add(new PlateauGenerator());
 	}
-	
-	boolean generating = true;
 	
 	class PlateauGenerator extends BlockPopulator
 	{
